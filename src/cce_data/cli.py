@@ -6,6 +6,7 @@ from pathlib import Path
 
 from cce_data.build import build_dataset
 from cce_data.download import download_sources
+from cce_data.freeze import freeze_dataset
 from cce_data.inspect import inspect_dataset
 from cce_data.rubric import score_dataset
 
@@ -59,7 +60,8 @@ def score_main() -> None:
     parser.add_argument("--input", default="data/processed/phase2_dataset.jsonl")
     parser.add_argument("--output", default="data/processed/phase2_dataset_scored.jsonl")
     parser.add_argument("--provider", default="none", choices=["none", "openai"])
-    parser.add_argument("--model", default="gpt-4.1-mini")
+    parser.add_argument("--model", help="Judge model. Defaults to configs/rubric_judge.yaml.")
+    parser.add_argument("--rubric-config", default="configs/rubric_judge.yaml")
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     result = score_dataset(
@@ -67,6 +69,7 @@ def score_main() -> None:
         output_path=Path(args.output),
         provider=args.provider,
         model=args.model,
+        rubric_config_path=Path(args.rubric_config),
         limit=args.limit,
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -78,3 +81,19 @@ def inspect_main() -> None:
     parser.add_argument("-n", type=int, default=3)
     args = parser.parse_args()
     print(inspect_dataset(Path(args.path), n=args.n))
+
+
+def freeze_main() -> None:
+    parser = argparse.ArgumentParser(description="Freeze a dataset version by hashing it.")
+    parser.add_argument("--input", default="data/processed_included/phase2_dataset.jsonl")
+    parser.add_argument("--output", default="dataset_freezes/phase2_v1.json")
+    parser.add_argument("--label", default="phase2_v1")
+    parser.add_argument("--manifest", default="data/processed_included/manifest.json")
+    args = parser.parse_args()
+    freeze = freeze_dataset(
+        input_path=Path(args.input),
+        output_path=Path(args.output),
+        label=args.label,
+        manifest_path=Path(args.manifest) if args.manifest else None,
+    )
+    print(json.dumps(freeze, indent=2, ensure_ascii=False))

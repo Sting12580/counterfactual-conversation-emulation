@@ -73,6 +73,17 @@ Build only included examples:
 cce-build --included-only
 ```
 
+Freeze the included dataset before Phase 3:
+
+```bash
+cce-build --included-only --output-dir data/processed_included
+cce-freeze \
+  --input data/processed_included/phase2_dataset.jsonl \
+  --manifest data/processed_included/manifest.json \
+  --output dataset_freezes/phase2_v1.json \
+  --label phase2_v1
+```
+
 Run a small smoke build:
 
 ```bash
@@ -92,6 +103,8 @@ pip install -e '.[judge]'
 export OPENAI_API_KEY=...
 cce-score --provider openai --model gpt-4.1-mini --limit 20
 ```
+
+The default Phase 3 rubric judge config is in `configs/rubric_judge.yaml`. See [docs/phase3_rubric_judge_decision.md](docs/phase3_rubric_judge_decision.md).
 
 ## Canonical Schema
 

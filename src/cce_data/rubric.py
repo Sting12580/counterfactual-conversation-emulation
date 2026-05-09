@@ -6,38 +6,17 @@ import re
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from cce_data.build import write_csv, write_jsonl
 
 
-RUBRIC_SYSTEM = """You are a careful clinical evaluation assistant.
-Score a clinician's final diagnosis and management plan for a patient context.
-This is research annotation, not medical advice.
-Return only valid JSON with keys: score, rationale, dimensions."""
+DEFAULT_RUBRIC_CONFIG = Path("configs/rubric_judge.yaml")
 
-RUBRIC_USER_TEMPLATE = """Patient context available at time zero:
-{x_patient_context}
 
-Clinician final output to score:
-{a_clinician}
-
-Rubric:
-- Diagnostic appropriateness and differential reasoning.
-- Management-plan appropriateness and safety.
-- Patient-specific use of available context.
-- Clear communication of uncertainty, follow-up, and red flags when relevant.
-- Penalize hallucinated or unsupported claims.
-
-Return JSON:
-{{
-  "score": <float from 0.0 to 1.0>,
-  "rationale": "<brief rationale>",
-  "dimensions": {{
-    "diagnosis": <0.0-1.0>,
-    "management": <0.0-1.0>,
-    "context_use": <0.0-1.0>,
-    "safety": <0.0-1.0>
-  }}
-}}"""
+def load_rubric_config(path: Path = DEFAULT_RUBRIC_CONFIG) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -51,7 +30,15 @@ def _extract_json(text: str) -> dict[str, Any]:
         return json.loads(match.group(0))
 
 
-def score_with_openai(record: dict[str, Any], model: str) -> dict[str, Any]:
+def _validate_score_payload(parsed: dict[str, Any]) -> dict[str, Any]:
+    score = float(parsed["score"])
+    if score < 0 or score > 1:
+        raise ValueError(f"Judge score must be in [0,1], got {score}")
+    parsed["score"] = score
+    return parsed
+
+
+def score_with_openai(record: dict[str, Any], model: str, rubric_config: dict[str, Any]) -> dict[str, Any]:
     try:
         from openai import OpenAI
     except ImportError as exc:
@@ -61,16 +48,17 @@ def score_with_openai(record: dict[str, Any], model: str) -> dict[str, Any]:
         raise RuntimeError("OPENAI_API_KEY is required for provider=openai")
 
     client = OpenAI()
-    user_prompt = RUBRIC_USER_TEMPLATE.format(
+    user_prompt = rubric_config["user_prompt_template"].format(
         x_patient_context=record.get("x_patient_context", ""),
         a_clinician=record.get("a_clinician", ""),
     )
+    system_prompt = rubric_config["system_prompt"]
 
     if hasattr(client, "responses"):
         response = client.responses.create(
             model=model,
             input=[
-                {"role": "system", "content": RUBRIC_SYSTEM},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
         )
@@ -79,29 +67,28 @@ def score_with_openai(record: dict[str, Any], model: str) -> dict[str, Any]:
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": RUBRIC_SYSTEM},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0,
         )
         text = response.choices[0].message.content or ""
 
-    parsed = _extract_json(text)
-    score = float(parsed["score"])
-    if score < 0 or score > 1:
-        raise ValueError(f"Judge score must be in [0,1], got {score}")
-    return parsed
+    return _validate_score_payload(_extract_json(text))
 
 
 def score_dataset(
     input_path: Path = Path("data/processed/phase2_dataset.jsonl"),
     output_path: Path = Path("data/processed/phase2_dataset_scored.jsonl"),
     provider: str = "none",
-    model: str = "gpt-4.1-mini",
+    model: str | None = None,
+    rubric_config_path: Path = DEFAULT_RUBRIC_CONFIG,
     limit: int | None = None,
 ) -> dict[str, Any]:
     if not input_path.exists():
         raise FileNotFoundError(f"Dataset not found: {input_path}")
+    rubric_config = load_rubric_config(rubric_config_path)
+    model = model or rubric_config.get("recommended_default_model", "gpt-4.1-mini")
 
     records: list[dict[str, Any]] = []
     scored = 0
@@ -114,9 +101,16 @@ def score_dataset(
             if record.get("inclusion_status") == "included" and record.get("y_score") is None:
                 if provider == "none":
                     record["y_source"] = "needs_scoring"
-                    record["y_rubric"] = "not_scored_provider_none"
+                    record["y_rubric"] = json.dumps(
+                        {
+                            "rubric_version": rubric_config.get("rubric_version"),
+                            "status": "not_scored_provider_none",
+                        },
+                        ensure_ascii=False,
+                    )
                 elif provider == "openai":
-                    result = score_with_openai(record, model=model)
+                    result = score_with_openai(record, model=model, rubric_config=rubric_config)
+                    result["rubric_version"] = rubric_config.get("rubric_version")
                     record["y_score"] = float(result["score"])
                     record["y_rubric"] = json.dumps(result, ensure_ascii=False)
                     record["y_source"] = f"openai:{model}"
@@ -134,5 +128,7 @@ def score_dataset(
         "csv": str(csv_path),
         "provider": provider,
         "model": model,
+        "rubric_config": str(rubric_config_path),
+        "rubric_version": rubric_config.get("rubric_version"),
         "scored_or_marked": scored,
     }

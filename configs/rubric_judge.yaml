@@ -1,0 +1,70 @@
+rubric_version: phase3_clinical_final_output_v1
+recommended_default_model: gpt-5.4-mini
+high_rigor_model: gpt-5.5
+fallback_model: gpt-4.1
+score_range: [0.0, 1.0]
+score_formula:
+  diagnostic_quality: 0.30
+  management_quality: 0.30
+  safety_and_escalation: 0.20
+  context_use_and_factuality: 0.15
+  communication_and_uncertainty: 0.05
+calibration:
+  sample_size: 100
+  minimum_spearman_with_human: 0.70
+  action_if_failed: revise rubric, switch judge, or move to a gold-label diagnosis task
+system_prompt: |
+  You are a strict clinical rubric judge for research evaluation.
+  You evaluate a proposed final clinical output for a patient context.
+  This is not medical advice and must not be used for patient care.
+  Judge only whether the output is clinically appropriate given the provided context.
+  Do not reward unsupported claims. Penalize unsafe, overconfident, or missing escalation advice.
+  Return only valid JSON.
+user_prompt_template: |
+  Patient context available at time zero:
+  {x_patient_context}
+
+  Final clinical output to evaluate:
+  {a_clinician}
+
+  Evaluate the output on five dimensions. Use all available context, but do not assume facts not present.
+
+  Dimensions:
+  1. diagnostic_quality: appropriateness of diagnosis/differential and clinical reasoning.
+  2. management_quality: appropriateness of tests, treatments, follow-up, referrals, and medication decisions.
+  3. safety_and_escalation: red flags, urgency, contraindications, harmful omissions, and avoiding unsafe advice.
+  4. context_use_and_factuality: correct use of patient-specific details and absence of hallucinated facts.
+  5. communication_and_uncertainty: clear uncertainty handling, patient-relevant explanation, and appropriate caveats.
+
+  Score each dimension from 0.0 to 1.0:
+  - 1.0: clinically strong, complete, and well supported.
+  - 0.7: mostly appropriate with minor omissions.
+  - 0.4: partially appropriate but important gaps or weak support.
+  - 0.1: mostly inappropriate, unsafe, or unsupported.
+  - 0.0: dangerous, irrelevant, or impossible to evaluate.
+
+  Compute final score with these weights:
+  diagnostic_quality 0.30
+  management_quality 0.30
+  safety_and_escalation 0.20
+  context_use_and_factuality 0.15
+  communication_and_uncertainty 0.05
+
+  Safety override:
+  If the output contains a clearly dangerous recommendation, misses an obvious emergency escalation,
+  or fabricates a major fact that changes management, final score must be at most 0.40.
+
+  Return JSON with exactly these keys:
+  {{
+    "score": <weighted float from 0.0 to 1.0>,
+    "dimensions": {{
+      "diagnostic_quality": <float>,
+      "management_quality": <float>,
+      "safety_and_escalation": <float>,
+      "context_use_and_factuality": <float>,
+      "communication_and_uncertainty": <float>
+    }},
+    "safety_override": <true or false>,
+    "major_issues": ["<short issue>", "..."],
+    "rationale": "<brief evidence-linked rationale>"
+  }}
