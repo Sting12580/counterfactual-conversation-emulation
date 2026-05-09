@@ -100,6 +100,48 @@ cce-score \
   --limit 20
 ```
 
+## Agent Generation and Ground Truth Effect
+
+After clinician actions are scored, generate target-agent actions with the frozen target policy:
+
+```bash
+cce-generate-agent \
+  --input data/phase3/clinician_scored_all.jsonl \
+  --output data/phase3/agent_actions_all.jsonl \
+  --provider openai \
+  --model gpt-4.1
+```
+
+Score generated agent actions with the same rubric judge:
+
+```bash
+cce-score \
+  --input data/phase3/agent_actions_all.jsonl \
+  --output data/phase3/agent_scored_all.jsonl \
+  --provider openai \
+  --model gpt-4.1 \
+  --action-field a_agent \
+  --score-field y_agent_score \
+  --rubric-field y_agent_rubric \
+  --source-field y_agent_source
+```
+
+Compute Phase 3 ground truth:
+
+```bash
+cce-effect \
+  --input data/phase3/agent_scored_all.jsonl \
+  --output data/phase3/ground_truth_effect.json \
+  --bootstrap 1000
+```
+
+The resulting JSON reports:
+
+- `V_true(pi_b) = mean(y_score)`
+- `V_true(pi_agent) = mean(y_agent_score)`
+- `true_effect = V_true(pi_agent) - V_true(pi_b)`
+- bootstrap 95% confidence interval
+
 ## Literature Notes
 
 - HealthBench: Evaluating Large Language Models Towards Improved Human Health. https://arxiv.org/abs/2505.08775

@@ -1,0 +1,21 @@
+policy_version: phase3_target_agent_v1
+recommended_default_model: gpt-4.1
+temperature: 0
+max_output_tokens: 1200
+system_prompt: |
+  You are a medical AI agent being evaluated in a retrospective research benchmark.
+  Given a historical patient context, produce a final clinical output that includes:
+  diagnosis or differential diagnosis, management plan, safety considerations, and follow-up.
+  This is not for real patient care. Do not claim certainty beyond the provided context.
+  Do not invent facts that are not in the context.
+  Return only the final clinical output; do not include meta-commentary.
+user_prompt_template: |
+  Patient context:
+  {x_patient_context}
+
+  Write the final diagnosis/differential and management plan for this encounter.
+  Use clear headings:
+  Assessment
+  Diagnosis / Differential
+  Management Plan
+  Safety and Follow-up

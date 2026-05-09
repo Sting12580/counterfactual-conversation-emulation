@@ -4,8 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
+from cce_data.agent import generate_agent_actions
 from cce_data.build import build_dataset
 from cce_data.download import download_sources
+from cce_data.effect import compute_ground_truth_effect
 from cce_data.freeze import freeze_dataset
 from cce_data.inspect import inspect_dataset
 from cce_data.rubric import score_dataset
@@ -62,6 +64,10 @@ def score_main() -> None:
     parser.add_argument("--provider", default="none", choices=["none", "openai"])
     parser.add_argument("--model", help="Judge model. Defaults to configs/rubric_judge.yaml.")
     parser.add_argument("--rubric-config", default="configs/rubric_judge.yaml")
+    parser.add_argument("--action-field", default="a_clinician")
+    parser.add_argument("--score-field", default="y_score")
+    parser.add_argument("--rubric-field", default="y_rubric")
+    parser.add_argument("--source-field", default="y_source")
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     result = score_dataset(
@@ -70,6 +76,10 @@ def score_main() -> None:
         provider=args.provider,
         model=args.model,
         rubric_config_path=Path(args.rubric_config),
+        action_field=args.action_field,
+        score_field=args.score_field,
+        rubric_field=args.rubric_field,
+        source_field=args.source_field,
         limit=args.limit,
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -97,3 +107,45 @@ def freeze_main() -> None:
         manifest_path=Path(args.manifest) if args.manifest else None,
     )
     print(json.dumps(freeze, indent=2, ensure_ascii=False))
+
+
+def generate_agent_main() -> None:
+    parser = argparse.ArgumentParser(description="Generate target-agent actions for Phase 3.")
+    parser.add_argument("--input", default="data/phase3/clinician_scored_all.jsonl")
+    parser.add_argument("--output", default="data/phase3/agent_actions_all.jsonl")
+    parser.add_argument("--provider", default="openai", choices=["openai"])
+    parser.add_argument("--model", help="Agent model. Defaults to configs/agent_policy.yaml.")
+    parser.add_argument("--agent-config", default="configs/agent_policy.yaml")
+    parser.add_argument("--limit", type=int)
+    parser.add_argument("--overwrite", action="store_true")
+    args = parser.parse_args()
+    result = generate_agent_actions(
+        input_path=Path(args.input),
+        output_path=Path(args.output),
+        provider=args.provider,
+        model=args.model,
+        agent_config_path=Path(args.agent_config),
+        limit=args.limit,
+        overwrite=args.overwrite,
+    )
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+def effect_main() -> None:
+    parser = argparse.ArgumentParser(description="Compute Phase 3 ground-truth effect.")
+    parser.add_argument("--input", default="data/phase3/agent_scored_all.jsonl")
+    parser.add_argument("--output", default="data/phase3/ground_truth_effect.json")
+    parser.add_argument("--clinician-score-field", default="y_score")
+    parser.add_argument("--agent-score-field", default="y_agent_score")
+    parser.add_argument("--bootstrap", type=int, default=1000)
+    parser.add_argument("--seed", type=int, default=20260509)
+    args = parser.parse_args()
+    result = compute_ground_truth_effect(
+        input_path=Path(args.input),
+        output_path=Path(args.output),
+        clinician_score_field=args.clinician_score_field,
+        agent_score_field=args.agent_score_field,
+        bootstrap=args.bootstrap,
+        seed=args.seed,
+    )
+    print(json.dumps(result, indent=2, ensure_ascii=False))

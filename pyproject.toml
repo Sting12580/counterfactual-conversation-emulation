@@ -26,6 +26,8 @@ cce-build = "cce_data.cli:build_main"
 cce-score = "cce_data.cli:score_main"
 cce-inspect = "cce_data.cli:inspect_main"
 cce-freeze = "cce_data.cli:freeze_main"
+cce-generate-agent = "cce_data.cli:generate_agent_main"
+cce-effect = "cce_data.cli:effect_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

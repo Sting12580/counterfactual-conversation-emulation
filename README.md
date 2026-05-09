@@ -106,6 +106,30 @@ cce-score --provider openai --model gpt-4.1-mini --limit 20
 
 The default Phase 3 rubric judge config is in `configs/rubric_judge.yaml`. See [docs/phase3_rubric_judge_decision.md](docs/phase3_rubric_judge_decision.md).
 
+After clinician scoring, generate and score target-agent outputs:
+
+```bash
+cce-generate-agent \
+  --input data/phase3/clinician_scored_all.jsonl \
+  --output data/phase3/agent_actions_all.jsonl \
+  --provider openai \
+  --model gpt-4.1
+
+cce-score \
+  --input data/phase3/agent_actions_all.jsonl \
+  --output data/phase3/agent_scored_all.jsonl \
+  --provider openai \
+  --model gpt-4.1 \
+  --action-field a_agent \
+  --score-field y_agent_score \
+  --rubric-field y_agent_rubric \
+  --source-field y_agent_source
+
+cce-effect \
+  --input data/phase3/agent_scored_all.jsonl \
+  --output data/phase3/ground_truth_effect.json
+```
+
 ## Canonical Schema
 
 | Column | Meaning |

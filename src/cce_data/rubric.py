@@ -6,9 +6,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import yaml
 
-from cce_data.build import write_csv, write_jsonl
+from cce_data.build import write_jsonl
 
 
 DEFAULT_RUBRIC_CONFIG = Path("configs/rubric_judge.yaml")
@@ -38,7 +39,17 @@ def _validate_score_payload(parsed: dict[str, Any]) -> dict[str, Any]:
     return parsed
 
 
-def score_with_openai(record: dict[str, Any], model: str, rubric_config: dict[str, Any]) -> dict[str, Any]:
+def _write_dynamic_csv(records: list[dict[str, Any]], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(records).to_csv(path, index=False)
+
+
+def score_with_openai(
+    record: dict[str, Any],
+    action_text: str,
+    model: str,
+    rubric_config: dict[str, Any],
+) -> dict[str, Any]:
     try:
         from openai import OpenAI
     except ImportError as exc:
@@ -50,7 +61,7 @@ def score_with_openai(record: dict[str, Any], model: str, rubric_config: dict[st
     client = OpenAI()
     user_prompt = rubric_config["user_prompt_template"].format(
         x_patient_context=record.get("x_patient_context", ""),
-        a_clinician=record.get("a_clinician", ""),
+        a_clinician=action_text,
     )
     system_prompt = rubric_config["system_prompt"]
 
@@ -83,6 +94,10 @@ def score_dataset(
     provider: str = "none",
     model: str | None = None,
     rubric_config_path: Path = DEFAULT_RUBRIC_CONFIG,
+    action_field: str = "a_clinician",
+    score_field: str = "y_score",
+    rubric_field: str = "y_rubric",
+    source_field: str = "y_source",
     limit: int | None = None,
 ) -> dict[str, Any]:
     if not input_path.exists():
@@ -98,22 +113,34 @@ def score_dataset(
             if limit is not None and scored >= limit:
                 records.append(record)
                 continue
-            if record.get("inclusion_status") == "included" and record.get("y_score") is None:
+            action_text = record.get(action_field)
+            if (
+                record.get("inclusion_status") == "included"
+                and action_text
+                and record.get(score_field) is None
+            ):
                 if provider == "none":
-                    record["y_source"] = "needs_scoring"
-                    record["y_rubric"] = json.dumps(
+                    record[source_field] = "needs_scoring"
+                    record[rubric_field] = json.dumps(
                         {
                             "rubric_version": rubric_config.get("rubric_version"),
                             "status": "not_scored_provider_none",
+                            "action_field": action_field,
                         },
                         ensure_ascii=False,
                     )
                 elif provider == "openai":
-                    result = score_with_openai(record, model=model, rubric_config=rubric_config)
+                    result = score_with_openai(
+                        record,
+                        action_text=str(action_text),
+                        model=model,
+                        rubric_config=rubric_config,
+                    )
                     result["rubric_version"] = rubric_config.get("rubric_version")
-                    record["y_score"] = float(result["score"])
-                    record["y_rubric"] = json.dumps(result, ensure_ascii=False)
-                    record["y_source"] = f"openai:{model}"
+                    result["action_field"] = action_field
+                    record[score_field] = float(result["score"])
+                    record[rubric_field] = json.dumps(result, ensure_ascii=False)
+                    record[source_field] = f"openai:{model}"
                 else:
                     raise ValueError(f"Unsupported scoring provider: {provider}")
                 scored += 1
@@ -121,7 +148,7 @@ def score_dataset(
 
     write_jsonl(records, output_path)
     csv_path = output_path.with_suffix(".csv")
-    write_csv(records, csv_path)
+    _write_dynamic_csv(records, csv_path)
     return {
         "input": str(input_path),
         "output": str(output_path),
@@ -130,5 +157,7 @@ def score_dataset(
         "model": model,
         "rubric_config": str(rubric_config_path),
         "rubric_version": rubric_config.get("rubric_version"),
+        "action_field": action_field,
+        "score_field": score_field,
         "scored_or_marked": scored,
     }
