@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "counterfactual-conversation-emulation"
+version = "0.1.0"
+description = "Dataset construction pipeline for counterfactual conversation emulation of medical AI agents."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.0",
+  "requests>=2.31",
+  "tqdm>=4.66",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+hf = ["huggingface_hub>=0.23", "datasets>=2.19"]
+judge = ["openai>=1.0"]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[project.scripts]
+cce-download = "cce_data.cli:download_main"
+cce-build = "cce_data.cli:build_main"
+cce-score = "cce_data.cli:score_main"
+cce-inspect = "cce_data.cli:inspect_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

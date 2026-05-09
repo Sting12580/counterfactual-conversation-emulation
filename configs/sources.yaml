@@ -1,0 +1,44 @@
+sources:
+  aci_bench:
+    priority: 1
+    enabled_by_default: true
+    kind: github_archive
+    repo: wyim/aci-bench
+    branch: main
+    license: CC BY 4.0
+    role: primary_full_encounter_note
+    notes: Full doctor-patient conversations with associated clinical notes.
+  mts_dialog:
+    priority: 2
+    enabled_by_default: true
+    kind: github_archive
+    repo: abachaa/MTS-Dialog
+    branch: main
+    license: CC BY 4.0
+    role: primary_short_dialogue_section_note
+    notes: Short doctor-patient conversations with section-specific clinical summaries.
+  primock57:
+    priority: 3
+    enabled_by_default: true
+    kind: github_archive
+    repo: babylonhealth/primock57
+    branch: main
+    license: CC BY 4.0
+    role: smoke_test_mock_consultations
+    notes: Mock primary-care consultations with transcripts and clinician notes.
+  meddialog:
+    priority: 4
+    enabled_by_default: false
+    kind: huggingface_dataset
+    repo: UCSD26/medical_dialog
+    license: unknown
+    role: auxiliary_dialog_only
+    notes: Large-scale patient-doctor dialogues; no clinician note, so not primary for D=(X,A,Y).
+  notechat:
+    priority: 5
+    enabled_by_default: false
+    kind: huggingface_dataset
+    repo: akemiH/NoteChat
+    license: check_source
+    role: synthetic_auxiliary
+    notes: Synthetic doctor-patient dialogues conditioned on clinical notes; useful only for sensitivity analyses.
