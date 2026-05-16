@@ -27,21 +27,28 @@ def fit_density_ratio_classifier(
     features_b: np.ndarray,
     seed: int = 0,
     C: float = 100.0,
-) -> LogisticRegression:
+    calibrate: bool = False,
+):
     """Train logistic P(class=target | x, phi).
 
     Inputs are already-featurized concatenations of (x_features, phi_features).
-    C defaults to 100 (weak regularization) so the classifier can sharpen
-    well-separated phi-clusters; lower C if features are very high-dim.
+    C defaults to 100 (weak regularization) — appropriate for low-dim toy
+    settings. For high-dim real text embeddings (n << p), use C <= 1.0 to
+    avoid perfect-separation overfit and set calibrate=True for Platt scaling.
 
-    Returns a fitted sklearn LogisticRegression.
+    Returns a fitted sklearn classifier exposing .predict_proba(...).
     """
     X = np.vstack([features_target, features_b])
     y = np.concatenate([
         np.ones(len(features_target), dtype=int),
         np.zeros(len(features_b), dtype=int),
     ])
-    clf = LogisticRegression(C=C, max_iter=2000, random_state=seed)
+    base = LogisticRegression(C=C, max_iter=2000, random_state=seed)
+    if calibrate:
+        from sklearn.calibration import CalibratedClassifierCV
+        clf = CalibratedClassifierCV(base, method="sigmoid", cv=5)
+    else:
+        clf = base
     clf.fit(X, y)
     return clf
 
