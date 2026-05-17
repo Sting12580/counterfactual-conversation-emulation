@@ -146,15 +146,20 @@ def offcem_real(
     }
 
 
-def bootstrap_ci(
+def bootstrap_run(
     estimator: Callable[[RealData, int], dict],
     data: RealData,
     n_boot: int = 100,
     seed: int = 0,
-) -> tuple[float, float]:
-    """Bootstrap CI on V_hat by resampling the index set, refitting each time."""
+) -> list[tuple[float, float]]:
+    """Bootstrap on V_hat by resampling rows, refitting each time.
+
+    Returns list of (V_hat_b, V_b_b) per bootstrap iteration where V_b_b
+    is the bootstrap-resampled clinician mean. Keeping both lets us
+    compute RMSE, direction agreement, and quantile-CI downstream.
+    """
     rng = np.random.default_rng(seed)
-    vals = []
+    samples = []
     for b in range(n_boot):
         idx = rng.integers(0, data.n, size=data.n)
         sub = RealData(
@@ -164,8 +169,35 @@ def bootstrap_ci(
             y_clinician=data.y_clinician[idx],
             y_agent=data.y_agent[idx],
         )
-        vals.append(estimator(sub, seed=seed + b)["v_hat"])
-    return float(np.quantile(vals, 0.025)), float(np.quantile(vals, 0.975))
+        v_hat = float(estimator(sub, seed=seed + b)["v_hat"])
+        v_b = float(sub.y_clinician.mean())
+        samples.append((v_hat, v_b))
+    return samples
+
+
+def metrics_from_bootstrap(
+    samples: list[tuple[float, float]],
+    v_true_agent: float,
+    v_true_b: float,
+) -> dict:
+    """Compute RMSE, direction-agreement rate, and quantile 95% CI from
+    bootstrap samples.
+
+    - RMSE       = sqrt( mean (V_hat_b - V_true_agent)^2 )  (exact)
+    - direction  = mean[ sign(V_hat_b - V_b_b) == sign(V_true_agent - V_true_b) ]
+    - CI         = empirical [2.5%, 97.5%] quantiles of V_hat_b
+    """
+    v_hats = np.array([s[0] for s in samples])
+    v_bs = np.array([s[1] for s in samples])
+    true_sign = 1.0 if v_true_agent > v_true_b else -1.0
+    return {
+        "rmse": float(np.sqrt(np.mean((v_hats - v_true_agent) ** 2))),
+        "direction_rate": float(np.mean(np.sign(v_hats - v_bs) == true_sign)),
+        "ci_low": float(np.quantile(v_hats, 0.025)),
+        "ci_high": float(np.quantile(v_hats, 0.975)),
+        "v_hat_b": v_hats.tolist(),
+        "v_b_b": v_bs.tolist(),
+    }
 
 
 def run_phase5_headline(
@@ -202,10 +234,15 @@ def run_phase5_headline(
             "direction_correct": direction,
         }
         if n_boot > 0:
-            ci_low, ci_high = bootstrap_ci(est, data, n_boot=n_boot, seed=seed)
-            entry["ci_low"] = ci_low
-            entry["ci_high"] = ci_high
-            entry["ci_covers_truth"] = ci_low <= v_true_agent <= ci_high
+            samples = bootstrap_run(est, data, n_boot=n_boot, seed=seed)
+            metrics = metrics_from_bootstrap(samples, v_true_agent, v_true_b)
+            entry["rmse"] = metrics["rmse"]
+            entry["direction_rate"] = metrics["direction_rate"]
+            entry["ci_low"] = metrics["ci_low"]
+            entry["ci_high"] = metrics["ci_high"]
+            entry["ci_covers_truth"] = metrics["ci_low"] <= v_true_agent <= metrics["ci_high"]
+            entry["bootstrap_v_hat"] = metrics["v_hat_b"]
+            entry["bootstrap_v_b"] = metrics["v_b_b"]
         results[name] = entry
 
     return {
@@ -229,22 +266,24 @@ def format_headline_table(report: dict) -> str:
     lines.append("")
     has_ci = "ci_low" in next(iter(report["results"].values()))
     if has_ci:
-        lines.append(f"{'Estimator':<10} {'V_hat':>8} {'Bias':>9} {'Rel Bias':>10} "
-                     f"{'95% CI':>22} {'Cov':>5} {'Dir':>5}")
+        lines.append(
+            f"{'Estimator':<10} {'V_hat':>8} {'Bias':>9} {'Rel Bias':>9} "
+            f"{'RMSE':>7} {'95% CI':>21} {'Cov':>4} {'Dir%':>6}"
+        )
     else:
-        lines.append(f"{'Estimator':<10} {'V_hat':>8} {'Bias':>9} {'Rel Bias':>10} {'Dir':>5}")
-    lines.append("-" * 80)
+        lines.append(f"{'Estimator':<10} {'V_hat':>8} {'Bias':>9} {'Rel Bias':>9} {'Dir':>5}")
+    lines.append("-" * 88)
     for name, r in report["results"].items():
-        dirn = "yes" if r["direction_correct"] else "no"
+        dirn_point = "yes" if r["direction_correct"] else "no"
         if has_ci:
             ci = f"[{r['ci_low']:.3f},{r['ci_high']:.3f}]"
             cov = "yes" if r["ci_covers_truth"] else "no"
             lines.append(
-                f"{name:<10} {r['v_hat']:>8.4f} {r['bias']:>+9.4f} {r['rel_bias']:>+10.2%} "
-                f"{ci:>22} {cov:>5} {dirn:>5}"
+                f"{name:<10} {r['v_hat']:>8.4f} {r['bias']:>+9.4f} {r['rel_bias']:>+9.2%} "
+                f"{r['rmse']:>7.4f} {ci:>21} {cov:>4} {r['direction_rate']:>6.1%}"
             )
         else:
             lines.append(
-                f"{name:<10} {r['v_hat']:>8.4f} {r['bias']:>+9.4f} {r['rel_bias']:>+10.2%} {dirn:>5}"
+                f"{name:<10} {r['v_hat']:>8.4f} {r['bias']:>+9.4f} {r['rel_bias']:>+9.2%} {dirn_point:>5}"
             )
     return "\n".join(lines)

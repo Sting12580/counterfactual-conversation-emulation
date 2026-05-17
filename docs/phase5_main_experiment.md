@@ -25,68 +25,83 @@ gap is statistically significant.
 
 ## Result 1 — SBERT embedding (sentence-transformers/all-MiniLM-L6-v2, 384-d)
 
-`data/phase5/headline.json` — full 100-bootstrap run, 40 min wall time.
+`data/phase5/headline_sbert_v2.json` — 100-bootstrap run with raw values
+preserved (45 min wall time). RMSE and direction-agreement rate are
+computed exactly from the 100 bootstrap estimates.
 
-| Estimator | V̂ | Bias | Rel Bias | 95% CI | CI cov truth | Dir |
-|---|---|---|---|---|---|---|
-| DM | 0.7330 | −0.1255 | **−14.62%** ✓ | [0.697, 0.751] | no | **yes** ✓ |
-| MIPS | 0.6636 | −0.1949 | −22.71% ✗ | [0.574, 0.719] | no | no ✗ |
-| OffCEM | 0.7256 | −0.1329 | **−15.48%** ✓ | [0.695, 0.747] | no | **yes** ✓ |
+| Estimator | V̂ | Bias | Rel Bias | RMSE | 95% CI | Cov | Dir % |
+|---|---|---|---|---|---|---|---|
+| DM | 0.7330 | −0.1255 | **−14.62%** ✓ | 0.1357 | [0.697, 0.751] | no | **100.0%** ✓ |
+| MIPS | 0.6636 | −0.1949 | −22.71% ✗ | 0.2142 | [0.574, 0.719] | no | **32.0%** ✗ |
+| OffCEM | 0.7256 | −0.1329 | **−15.48%** ✓ | 0.1401 | [0.695, 0.747] | no | **100.0%** ✓ |
 
 **Plan v2 success criterion** (rel bias < 20% AND direction correct):
-DM and OffCEM PASS; MIPS FAILS.
+DM and OffCEM PASS; MIPS FAILS. The MIPS direction rate of 32 % is the
+striking headline failure: across 100 bootstrap resamples, MIPS gets the
+sign of the effect right only one third of the time — worse than chance.
 
 ## Result 2 — OpenAI embedding (text-embedding-3-small, 1536-d)
 
-`data/phase5/headline_openai.json` — full 100-bootstrap run, ~155 min wall time.
+`data/phase5/headline_openai_v2.json` — 100-bootstrap with raw values
+preserved (~155 min wall time).
 
-| Estimator | V̂ | Bias | Rel Bias | 95% CI | CI cov truth | Dir |
-|---|---|---|---|---|---|---|
-| DM | 0.6931 | −0.1654 | −19.27% | [0.661, 0.701] | no | yes |
-| MIPS | 0.7494 | −0.1091 | **−12.71%** ✓ | [0.706, 0.793] | no | **yes** ✓ |
-| OffCEM | 0.6974 | −0.1611 | −18.76% | [0.662, 0.702] | no | yes |
+| Estimator | V̂ | Bias | Rel Bias | RMSE | 95% CI | Cov | Dir % |
+|---|---|---|---|---|---|---|---|
+| DM | 0.6884 | −0.1701 | −19.81% | 0.1789 | [0.660, 0.700] | no | **96.0%** ✓ |
+| MIPS | 0.7494 | −0.1091 | **−12.71%** ✓ | **0.1068** | [0.706, 0.793] | no | **100.0%** ✓ |
+| OffCEM | 0.6921 | −0.1664 | −19.39% | 0.1772 | [0.663, 0.703] | no | **96.0%** ✓ |
 
-**All three estimators recover the direction.** MIPS now has the smallest
-bias (12.71%) and its CI upper bound (0.793) is the closest any estimator
-gets to V_true_agent = 0.8585, missing the truth by only 0.066. DM and
-OffCEM both slightly worse than under SBERT.
+**All three estimators recover the direction.** MIPS has the smallest
+bias (12.71%), smallest RMSE (0.1068 — lowest of any estimator-embedding
+combination in this table), and its CI upper bound (0.793) is the closest
+any estimator gets to V_true_agent = 0.8585, missing the truth by only
+0.066. DM and OffCEM are both slightly worse than under SBERT for point
+estimate, but recover direction reliably (96 %).
 
-## Side-by-side comparison (both with 100-iter bootstrap)
+## Side-by-side comparison (both with 100-iter bootstrap, raw values saved)
 
 ```
-                       SBERT (384-d)                       OpenAI (1536-d)
-Estimator     V̂     Rel Bias    95% CI         Dir       V̂     Rel Bias    95% CI         Dir
-───────────────────────────────────────────────────────────────────────────────────────────────────
-DM          0.733   -14.6%   [.697, .751]      ✓        0.693   -19.3%   [.661, .701]      ✓
-MIPS        0.664   -22.7%   [.574, .719]      ✗        0.749   -12.7%   [.706, .793]      ✓
-OffCEM      0.726   -15.5%   [.695, .747]      ✓        0.697   -18.8%   [.662, .702]      ✓
+                      SBERT (384-d)                              OpenAI (1536-d)
+Estimator     V̂    Rel Bias  RMSE    Dir %       V̂    Rel Bias  RMSE    Dir %
+─────────────────────────────────────────────────────────────────────────────────────────
+DM          0.733  -14.6%   0.1357  100.0%      0.688  -19.8%   0.1789   96.0%
+MIPS        0.664  -22.7%   0.2142   32.0%      0.749  -12.7%   0.1068  100.0%   ★ best
+OffCEM      0.726  -15.5%   0.1401  100.0%      0.692  -19.4%   0.1772   96.0%
 
-V_true(π_agent) = 0.8585       (no CI covers truth in either embedding regime)
+V_true(π_agent) = 0.8585       (none of the six CIs covers truth)
 ```
 
 ## Key findings
 
 1. **The "best" estimator depends on the embedding.**
-   - SBERT → DM is best (outcome model dominates; classifier-based density
-     ratio collapses in low-dim space).
-   - OpenAI → MIPS is best (richer embedding gives the classifier real
-     signal; DM/OffCEM lose to small-n overfit on 4608-d concatenated
-     features).
+   - SBERT → DM is best by RMSE 0.1357 (outcome model dominates;
+     classifier-based density ratio collapses in 384-d space).
+   - OpenAI → MIPS is best by RMSE 0.1068 (richer embedding gives the
+     classifier real signal; DM/OffCEM lose to small-n overfit on
+     4608-d concatenated features).
 
-2. **All estimators systematically underestimate V_agent (point-estimate
-   bias is consistently negative).** Bootstrap CIs under SBERT are tight
-   (~5pp wide for DM/OffCEM) but none cover the ground-truth V_agent.
-   Bias dominates over sampling variance.
+2. **MIPS direction rate flips from 32 % under SBERT to 100 % under
+   OpenAI.** Under SBERT, MIPS gets the sign wrong on 68 out of 100
+   bootstrap resamples — strictly worse than chance. This is the most
+   dramatic empirical finding in the paper: classifier-based density
+   ratio in a low-dim embedding is not just biased, it is *anti-correlated*
+   with truth on bootstrap resamples.
 
-3. **Plan v2 §"two key assumptions" partially validated empirically.**
+3. **All estimators systematically underestimate V_agent regardless of
+   embedding.** All six 95 % CIs lie entirely below the true V_agent.
+   Bias dominates over sampling variance; tightening the CI does not
+   improve coverage. This is plan v2 §"risk 2" (positivity violation)
+   manifesting on real text data.
+
+4. **Plan v2 §"two key assumptions" partially validated empirically.**
    - "No Direct Effect" holds well enough that MIPS over OpenAI embedding
-     recovers direction with 12.7% bias.
+     recovers direction with 12.7 % bias and 100 % direction rate.
    - "Common embedding support" issues are visible in the SBERT run where
-     MIPS misses direction entirely.
+     MIPS misses direction with rate 32 %.
 
-4. **OffCEM's doubly-robust promise does not pay off on this dataset.**
-   In both embedding regimes, OffCEM lands between DM and MIPS rather
-   than outperforming both. This is the paper's nuance: doubly robust is
+5. **OffCEM's doubly-robust promise does not pay off on this dataset.**
+   In both embedding regimes, OffCEM lands between DM and MIPS by RMSE
+   rather than outperforming both. The paper's nuance: doubly robust is
    only "best of both" when neither component fails outright; here
    embedding choice already determines which component is healthy.
 
