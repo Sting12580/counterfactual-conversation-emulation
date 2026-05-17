@@ -38,29 +38,30 @@ DM and OffCEM PASS; MIPS FAILS.
 
 ## Result 2 — OpenAI embedding (text-embedding-3-small, 1536-d)
 
-`data/phase5/headline_openai_point.json` — point estimates only (bootstrap
-deferred; would take ~80 min due to 4× feature dimensionality).
+`data/phase5/headline_openai.json` — full 100-bootstrap run, ~155 min wall time.
 
-| Estimator | V̂ | Bias | Rel Bias | Dir |
-|---|---|---|---|---|
-| DM | 0.6889 | −0.1696 | −19.76% | yes |
-| MIPS | 0.7494 | −0.1091 | **−12.71%** ✓ | yes |
-| OffCEM | 0.6939 | −0.1646 | −19.18% | yes |
+| Estimator | V̂ | Bias | Rel Bias | 95% CI | CI cov truth | Dir |
+|---|---|---|---|---|---|---|
+| DM | 0.6931 | −0.1654 | −19.27% | [0.661, 0.701] | no | yes |
+| MIPS | 0.7494 | −0.1091 | **−12.71%** ✓ | [0.706, 0.793] | no | **yes** ✓ |
+| OffCEM | 0.6974 | −0.1611 | −18.76% | [0.662, 0.702] | no | yes |
 
 **All three estimators recover the direction.** MIPS now has the smallest
-bias (12.71%), DM and OffCEM both slightly worse than under SBERT.
+bias (12.71%) and its CI upper bound (0.793) is the closest any estimator
+gets to V_true_agent = 0.8585, missing the truth by only 0.066. DM and
+OffCEM both slightly worse than under SBERT.
 
-## Side-by-side comparison
+## Side-by-side comparison (both with 100-iter bootstrap)
 
 ```
-                    SBERT (384-d)           OpenAI (1536-d)
-Estimator     V̂      Bias    Dir         V̂      Bias     Dir
-─────────────────────────────────────────────────────────────────────
-DM          0.733    -14.6%   ✓         0.689   -19.8%    ✓
-MIPS        0.664    -22.7%   ✗         0.749   -12.7%    ✓  <-- flipped
-OffCEM      0.726    -15.5%   ✓         0.694   -19.2%    ✓
+                       SBERT (384-d)                       OpenAI (1536-d)
+Estimator     V̂     Rel Bias    95% CI         Dir       V̂     Rel Bias    95% CI         Dir
+───────────────────────────────────────────────────────────────────────────────────────────────────
+DM          0.733   -14.6%   [.697, .751]      ✓        0.693   -19.3%   [.661, .701]      ✓
+MIPS        0.664   -22.7%   [.574, .719]      ✗        0.749   -12.7%   [.706, .793]      ✓
+OffCEM      0.726   -15.5%   [.695, .747]      ✓        0.697   -18.8%   [.662, .702]      ✓
 
-V_true(π_agent) = 0.8585
+V_true(π_agent) = 0.8585       (no CI covers truth in either embedding regime)
 ```
 
 ## Key findings
@@ -91,7 +92,7 @@ V_true(π_agent) = 0.8585
 
 ## What still needs to run
 
-- [ ] OpenAI bootstrap (CI + coverage) — ~80 min
+- [x] OpenAI bootstrap (CI + coverage) — completed 2026-05-16, ~155 min
 - [ ] Phase 6 ablation #2: agent capability (GPT-3.5 weak vs GPT-4.1 strong)
 - [ ] Phase 6 ablation #3: positivity diagnostics (weight tail, ESS)
 - [ ] Phase 6 ablation #4: conversation length subgroups
