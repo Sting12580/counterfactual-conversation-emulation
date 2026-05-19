@@ -2,6 +2,23 @@ rubric_version: phase3_clinical_final_output_v1
 recommended_default_model: gpt-5.4-mini
 high_rigor_model: gpt-5.5
 fallback_model: gpt-4.1
+provider_defaults:
+  openai: gpt-4o
+  anthropic: claude-sonnet-4-20250514
+  google: gemini-2.5-pro
+recommended_external_judges:
+  primary:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    use: cross-company sensitivity judge with strong reasoning and manageable cost
+  high_rigor:
+    provider: anthropic
+    model: claude-opus-4-1-20250805
+    use: expensive adjudication / final sensitivity analysis
+  second_vendor:
+    provider: google
+    model: gemini-2.5-pro
+    use: independent Google judge with structured JSON output support
 score_range: [0.0, 1.0]
 score_formula:
   diagnostic_quality: 0.30

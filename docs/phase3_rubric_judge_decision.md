@@ -10,9 +10,10 @@ configs/rubric_judge.yaml
 
 Recommended judge setup:
 
-- Default scalable judge: `gpt-5.4-mini`
-- High-rigor sensitivity judge: `gpt-5.5`
-- Fallback/comparability judge: `gpt-4.1`
+- OpenAI comparability judges already used: `gpt-4.1`, `gpt-4o`
+- Primary cross-vendor sensitivity judge: `anthropic:claude-sonnet-4-20250514`
+- High-rigor cross-vendor adjudication: `anthropic:claude-opus-4-1-20250805`
+- Second-vendor structured-output check: `google:gemini-2.5-pro`
 
 The target agent model should be recorded separately from the judge model. When possible, do not use the exact same model/configuration as both generator and judge.
 
@@ -99,6 +100,29 @@ cce-score \
   --model gpt-4.1 \
   --limit 20
 ```
+
+Cross-vendor judge smoke runs:
+
+```bash
+export ANTHROPIC_API_KEY=...
+cce-score \
+  --input data/processed_included/phase2_dataset.jsonl \
+  --output data/phase3/clinician_scored_20_claude_sonnet4.jsonl \
+  --provider anthropic \
+  --model claude-sonnet-4-20250514 \
+  --limit 20
+
+export GEMINI_API_KEY=...
+cce-score \
+  --input data/processed_included/phase2_dataset.jsonl \
+  --output data/phase3/clinician_scored_20_gemini25pro.jsonl \
+  --provider google \
+  --model gemini-2.5-pro \
+  --limit 20
+```
+
+For full paired clinician-vs-agent scoring without overwriting GPT-based fields, use
+`docs/cross_vendor_judge_runbook.md`.
 
 ## Agent Generation and Ground Truth Effect
 
