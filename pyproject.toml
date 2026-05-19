@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hf = ["huggingface_hub>=0.23", "datasets>=2.19"]
-judge = ["openai>=1.0"]
+judge = ["openai>=1.0", "anthropic>=0.40", "google-genai>=1.0"]
 dev = ["pytest>=8.0", "ruff>=0.4"]
 
 [project.scripts]

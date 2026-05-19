@@ -61,7 +61,11 @@ def score_main() -> None:
     parser = argparse.ArgumentParser(description="Score canonical dataset with a rubric judge.")
     parser.add_argument("--input", default="data/processed/phase2_dataset.jsonl")
     parser.add_argument("--output", default="data/processed/phase2_dataset_scored.jsonl")
-    parser.add_argument("--provider", default="none", choices=["none", "openai"])
+    parser.add_argument(
+        "--provider",
+        default="none",
+        choices=["none", "openai", "anthropic", "google", "gemini"],
+    )
     parser.add_argument("--model", help="Judge model. Defaults to configs/rubric_judge.yaml.")
     parser.add_argument("--rubric-config", default="configs/rubric_judge.yaml")
     parser.add_argument("--action-field", default="a_clinician")

@@ -104,7 +104,18 @@ export OPENAI_API_KEY=...
 cce-score --provider openai --model gpt-4.1-mini --limit 20
 ```
 
+Score with a cross-vendor judge to reduce same-provider self-preference:
+
+```bash
+export ANTHROPIC_API_KEY=...
+cce-score --provider anthropic --model claude-sonnet-4-20250514 --limit 20
+
+export GEMINI_API_KEY=...
+cce-score --provider google --model gemini-2.5-pro --limit 20
+```
+
 The default Phase 3 rubric judge config is in `configs/rubric_judge.yaml`. See [docs/phase3_rubric_judge_decision.md](docs/phase3_rubric_judge_decision.md).
+For full clinician-vs-agent reruns with separate score fields, see [docs/cross_vendor_judge_runbook.md](docs/cross_vendor_judge_runbook.md).
 
 After clinician scoring, generate and score target-agent outputs:
 
