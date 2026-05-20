@@ -141,6 +141,34 @@ cce-effect \
   --output data/phase3/ground_truth_effect.json
 ```
 
+## CounselBench Expert Labels
+
+CounselBench-Eval can be converted into the same Phase 2/3 shape, but its reward comes from
+mental-health professional annotations rather than an LLM judge. The converter aggregates the
+five expert annotations for each `(questionID, responder)`, uses the human therapist response as
+the behavior-policy baseline, and writes paired expert-scored files for the logged LLM responders.
+
+```bash
+pip install -e '.[hf]'
+cce-build-counselbench --output-dir data/counselbench
+```
+
+Expected outputs:
+
+```text
+data/counselbench/phase2_dataset.jsonl
+data/counselbench/phase3_gpt4_expert_scored.jsonl
+data/counselbench/phase3_llama3_expert_scored.jsonl
+data/counselbench/phase3_gemini_expert_scored.jsonl
+data/counselbench/ground_truth_effect_gpt4.json
+data/counselbench/ground_truth_effect_llama3.json
+data/counselbench/ground_truth_effect_gemini.json
+```
+
+The default reward is a normalized composite of expert `overall`, `empathy`, `specificity`,
+`factual_consistency`, low `toxicity`, and low unauthorized `medical_advice` rate. Use
+`--reward-mode overall` if you want the expert overall score only.
+
 ## Canonical Schema
 
 | Column | Meaning |

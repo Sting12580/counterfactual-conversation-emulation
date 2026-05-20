@@ -23,6 +23,7 @@ dev = ["pytest>=8.0", "ruff>=0.4"]
 [project.scripts]
 cce-download = "cce_data.cli:download_main"
 cce-build = "cce_data.cli:build_main"
+cce-build-counselbench = "cce_data.cli:build_counselbench_main"
 cce-score = "cce_data.cli:score_main"
 cce-inspect = "cce_data.cli:inspect_main"
 cce-freeze = "cce_data.cli:freeze_main"

@@ -12,6 +12,7 @@ data/interim/
 data/processed/
 data/processed_included/
 data/phase3/
+data/counselbench/
 logs/
 *.log
 .env

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from cce_data.agent import generate_agent_actions
 from cce_data.build import build_dataset
+from cce_data.counselbench import build_counselbench_dataset
 from cce_data.download import download_sources
 from cce_data.effect import compute_ground_truth_effect
 from cce_data.freeze import freeze_dataset
@@ -53,6 +54,24 @@ def build_main() -> None:
         include_excluded=not args.included_only,
         include_dialog_only=args.include_dialog_only,
         sample_per_source=args.sample_per_source,
+    )
+    print(json.dumps(manifest, indent=2, ensure_ascii=False))
+
+
+def build_counselbench_main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Build expert-labeled CounselBench files in the Phase 2/3 schema."
+    )
+    parser.add_argument("--output-dir", default="data/counselbench")
+    parser.add_argument("--reward-mode", choices=["composite", "overall"], default="composite")
+    parser.add_argument("--bootstrap", type=int, default=1000)
+    parser.add_argument("--seed", type=int, default=20260509)
+    args = parser.parse_args()
+    manifest = build_counselbench_dataset(
+        output_dir=Path(args.output_dir),
+        reward_mode=args.reward_mode,
+        bootstrap=args.bootstrap,
+        seed=args.seed,
     )
     print(json.dumps(manifest, indent=2, ensure_ascii=False))
 
