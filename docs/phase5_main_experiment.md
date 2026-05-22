@@ -111,7 +111,8 @@ V_true(π_agent) = 0.8585       (none of the six CIs covers truth)
 - [ ] Phase 6 ablation #2: agent capability (GPT-3.5 weak vs GPT-4.1 strong)
 - [ ] Phase 6 ablation #3: positivity diagnostics (weight tail, ESS)
 - [ ] Phase 6 ablation #4: conversation length subgroups
-- [ ] Phase 6 ablation #5: rubric judge sensitivity (try Claude / Gemini)
+- [x] Phase 6 ablation #5: rubric judge sensitivity (Claude sonnet-4-6) — completed 2026-05-22, ~152 min. See [phase5_sonnet46_judge_ablation.md](phase5_sonnet46_judge_ablation.md).
+- [ ] Phase 6 ablation #5 follow-up: third judge (Gemini 2.5 Pro) for triangulation
 
 ## Reproduction
 
