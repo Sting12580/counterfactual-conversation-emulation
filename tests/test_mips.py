@@ -74,7 +74,7 @@ def test_density_ratio_calibration() -> None:
     rng = np.random.default_rng(0)
     n, d = 500, 8
     pool = rng.normal(size=(2 * n, d))
-    clf = fit_density_ratio_classifier(pool[:n], pool[n:], seed=0)
+    clf = fit_density_ratio_classifier(pool[:n], pool[n:], seed=0, C=100.0)
     w = density_ratio(clf, pool[:n])
     # Allow some classifier noise; mean weight should be near 1.
     assert 0.7 < w.mean() < 1.3

@@ -97,8 +97,9 @@ def offcem_estimate(
     f_agent = model.predict(feat_agent)
     dm_term = float(f_agent.mean())
 
-    # Density ratio (MIPS-style) at logged behavior samples
-    clf = fit_density_ratio_classifier(feat_agent, feat_b, seed=seed)
+    # Toy synthetic features are low-dim; weak regularization (C=100)
+    # matches the legacy default that the synthetic_toy tests expect.
+    clf = fit_density_ratio_classifier(feat_agent, feat_b, seed=seed, C=100.0)
     w = density_ratio(clf, feat_b, clip=clip)
 
     # MIPS-style residual correction

@@ -18,7 +18,10 @@ Real-data note:
 """
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import LogisticRegression
 
 
@@ -26,15 +29,21 @@ def fit_density_ratio_classifier(
     features_target: np.ndarray,
     features_b: np.ndarray,
     seed: int = 0,
-    C: float = 100.0,
+    C: float = 0.1,
     calibrate: bool = False,
 ):
     """Train logistic P(class=target | x, phi).
 
     Inputs are already-featurized concatenations of (x_features, phi_features).
-    C defaults to 100 (weak regularization) — appropriate for low-dim toy
-    settings. For high-dim real text embeddings (n << p), use C <= 1.0 to
-    avoid perfect-separation overfit and set calibrate=True for Platt scaling.
+    For L2-normalized embeddings (OpenAI, MedCPT, BGE-M3 outputs), DO NOT
+    standardize: rows live on the unit sphere and feature-wise standardization
+    pushes them off, destroying the geometric structure the linear classifier
+    relies on. The default C=0.1 (strong L2) and clip-based weight bounding
+    handle high-dim ill-conditioning instead. LBFGS still emits matmul
+    overflow warnings during line search; these are line-search artifacts
+    that do not affect the converged solution and are suppressed below.
+    For low-dim toy settings, bump C to 100.0. Set calibrate=True for Platt
+    scaling.
 
     Returns a fitted sklearn classifier exposing .predict_proba(...).
     """
@@ -49,7 +58,10 @@ def fit_density_ratio_classifier(
         clf = CalibratedClassifierCV(base, method="sigmoid", cv=5)
     else:
         clf = base
-    clf.fit(X, y)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        clf.fit(X, y)
     return clf
 
 

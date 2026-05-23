@@ -90,7 +90,9 @@ def mips_estimate(
     ])
     feat_target = featurize(xs, a_target)
 
-    clf = fit_density_ratio_classifier(feat_target, feat_b, seed=seed)
+    # Toy synthetic features are low-dim; weak regularization (C=100)
+    # matches the legacy default that test_mips.py / synthetic_toy expect.
+    clf = fit_density_ratio_classifier(feat_target, feat_b, seed=seed, C=100.0)
     w = density_ratio(clf, feat_b, clip=clip)
 
     v_mips = float((w * y).mean())
