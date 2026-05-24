@@ -30,6 +30,10 @@ from cce_data.estimators.density_ratio import (
     effective_sample_size,
     fit_density_ratio_classifier,
 )
+from cce_data.estimators.learned_embedding import (
+    LearnedEmbeddingConfig,
+    learn_reward_informed_embeddings,
+)
 
 
 @dataclass
@@ -78,6 +82,33 @@ def featurize_records(
     phi_a_cl = embed_fn(a_cl)
     phi_a_ag = embed_fn(a_ag)
     return RealData(phi_x, phi_a_cl, phi_a_ag, y_cl, y_ag)
+
+
+def apply_learned_action_embedding(
+    data: RealData,
+    config: LearnedEmbeddingConfig,
+) -> tuple[RealData, dict]:
+    """Replace base text embeddings with reward-informed learned embeddings.
+
+    The projection is trained only on logged clinician tuples
+    ``(phi_x, phi_a_clinician, y_clinician)``. Agent rewards are carried
+    through for final evaluation but are not passed to the learner.
+    """
+    z_x, z_a_cl, z_a_ag, diagnostics = learn_reward_informed_embeddings(
+        phi_x=data.phi_x,
+        phi_a_clinician=data.phi_a_clinician,
+        phi_a_agent=data.phi_a_agent,
+        y_clinician=data.y_clinician,
+        config=config,
+    )
+    learned = RealData(
+        phi_x=z_x,
+        phi_a_clinician=z_a_cl,
+        phi_a_agent=z_a_ag,
+        y_clinician=data.y_clinician,
+        y_agent=data.y_agent,
+    )
+    return learned, diagnostics
 
 
 def dm_real(data: RealData, seed: int = 0) -> dict:
@@ -205,6 +236,7 @@ def run_phase5_headline(
     embed_fn: Callable[[list[str]], np.ndarray],
     n_boot: int = 100,
     seed: int = 0,
+    learned_embedding: LearnedEmbeddingConfig | None = None,
 ) -> dict:
     """Top-level Phase 5 main-experiment runner.
 
@@ -212,6 +244,19 @@ def run_phase5_headline(
     {v_hat, bias, rmse, ci_low, ci_high, direction_correct}.
     """
     data = featurize_records(records, embed_fn)
+    learned_diagnostics = None
+    if learned_embedding is not None:
+        print(
+            "  Learning reward-informed action embedding "
+            f"(latent_dim={learned_embedding.latent_dim}) ..."
+        )
+        data, learned_diagnostics = apply_learned_action_embedding(data, learned_embedding)
+        print(
+            "  Learned feature dim: "
+            f"{learned_diagnostics['feature_dim_after_concat']} "
+            f"(train MSE={learned_diagnostics['train_mse']:.4f}, "
+            f"val MSE={learned_diagnostics['validation_mse']:.4f})"
+        )
     v_true_b = float(data.y_clinician.mean())
     v_true_agent = float(data.y_agent.mean())
     true_effect = v_true_agent - v_true_b
@@ -245,13 +290,20 @@ def run_phase5_headline(
             entry["bootstrap_v_b"] = metrics["v_b_b"]
         results[name] = entry
 
-    return {
+    report = {
         "n": data.n,
         "v_true_b": v_true_b,
         "v_true_agent": v_true_agent,
         "true_effect": true_effect,
         "results": results,
     }
+    if learned_diagnostics is not None:
+        # The projection is treated like a fitted feature map for this runner;
+        # bootstrap resamples refit DM/MIPS/OffCEM but do not retrain the
+        # projection, keeping Phase 5 runtime practical.
+        learned_diagnostics["bootstrap_refits_learned_embedding"] = False
+        report["learned_embedding"] = learned_diagnostics
+    return report
 
 
 def format_headline_table(report: dict) -> str:

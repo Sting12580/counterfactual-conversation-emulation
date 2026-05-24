@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
+from cce_data.estimators.learned_embedding import LearnedEmbeddingConfig
 from cce_data.estimators.real_runner import (
     format_headline_table,
     run_phase5_headline,
@@ -140,6 +141,21 @@ def main() -> None:
     )
     parser.add_argument("--n-boot", type=int, default=100)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--learned-action-embedding",
+        action="store_true",
+        help=(
+            "Train a FineTune-style reward-informed projection on logged "
+            "clinician rewards before running DM/MIPS/OffCEM."
+        ),
+    )
+    parser.add_argument("--learned-dim", type=int, default=128)
+    parser.add_argument("--learned-hidden-dim", type=int, default=128)
+    parser.add_argument("--learned-epochs", type=int, default=500)
+    parser.add_argument("--learned-lr", type=float, default=1e-3)
+    parser.add_argument("--learned-weight-decay", type=float, default=1e-3)
+    parser.add_argument("--learned-patience", type=int, default=50)
+    parser.add_argument("--learned-validation-fraction", type=float, default=0.2)
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -157,9 +173,27 @@ def main() -> None:
         "medcpt-bge": make_medcpt_bge_embedder,
     }
     embed_fn = embedder_factories[args.embedder]()
+    learned_config = None
+    if args.learned_action_embedding:
+        learned_config = LearnedEmbeddingConfig(
+            latent_dim=args.learned_dim,
+            hidden_dim=args.learned_hidden_dim,
+            max_epochs=args.learned_epochs,
+            learning_rate=args.learned_lr,
+            weight_decay=args.learned_weight_decay,
+            validation_fraction=args.learned_validation_fraction,
+            patience=args.learned_patience,
+            seed=args.seed,
+        )
 
     t0 = time.time()
-    report = run_phase5_headline(records, embed_fn, n_boot=args.n_boot, seed=args.seed)
+    report = run_phase5_headline(
+        records,
+        embed_fn,
+        n_boot=args.n_boot,
+        seed=args.seed,
+        learned_embedding=learned_config,
+    )
     print()
     print(format_headline_table(report))
     print()
