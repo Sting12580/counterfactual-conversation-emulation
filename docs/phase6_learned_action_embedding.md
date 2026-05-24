@@ -36,6 +36,20 @@ Then the existing estimators reuse the same Phase 5 feature shape:
 [z_x ; z_a ; z_x * z_a]
 ```
 
+Two merge modes are available:
+
+```text
+replace:
+  z = learned_projection(phi)
+
+concat-pca:
+  z = [PCA(phi) ; learned_projection(phi)]
+```
+
+`concat-pca` is the safer follow-up when BGE-M3 is already strong: the PCA
+block preserves the frozen BGE geometry, while the learned block adds a small
+reward-informed correction.
+
 The agent reward `y_agent_score` is not passed to the learned embedding
 training step. It is only used afterward to evaluate bias/RMSE against the
 ground-truth target value.
@@ -51,6 +65,24 @@ PYTHONPATH=src python scripts/run_phase5.py \
   --learned-dim 128 \
   --learned-hidden-dim 128 \
   --learned-epochs 500 \
+  --n-boot 100 \
+  --seed 0
+```
+
+Recommended PCA-preserving follow-up:
+
+```bash
+PYTHONPATH=src python scripts/run_phase5.py \
+  --input data/phase3/agent_scored_all_judge_claude_sonnet46.renamed.jsonl \
+  --output data/phase5/headline_sonnet46_bge_pca128_learn32.json \
+  --embedder bge \
+  --learned-action-embedding \
+  --learned-merge concat-pca \
+  --pca-dim 128 \
+  --learned-dim 32 \
+  --learned-hidden-dim 32 \
+  --learned-epochs 100 \
+  --learned-weight-decay 1e-2 \
   --n-boot 100 \
   --seed 0
 ```

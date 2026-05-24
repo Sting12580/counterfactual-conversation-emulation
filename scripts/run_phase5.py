@@ -151,6 +151,22 @@ def main() -> None:
     )
     parser.add_argument("--learned-dim", type=int, default=128)
     parser.add_argument("--learned-hidden-dim", type=int, default=128)
+    parser.add_argument(
+        "--learned-merge",
+        choices=["replace", "concat-pca"],
+        default="replace",
+        help=(
+            "How learned embeddings replace or preserve the base text embedding. "
+            "'replace' uses only learned z; 'concat-pca' appends learned z to "
+            "a PCA projection of the frozen base embedding."
+        ),
+    )
+    parser.add_argument(
+        "--pca-dim",
+        type=int,
+        default=0,
+        help="PCA dimension for --learned-merge concat-pca.",
+    )
     parser.add_argument("--learned-epochs", type=int, default=500)
     parser.add_argument("--learned-lr", type=float, default=1e-3)
     parser.add_argument("--learned-weight-decay", type=float, default=1e-3)
@@ -178,6 +194,8 @@ def main() -> None:
         learned_config = LearnedEmbeddingConfig(
             latent_dim=args.learned_dim,
             hidden_dim=args.learned_hidden_dim,
+            merge_strategy=args.learned_merge,
+            pca_dim=args.pca_dim,
             max_epochs=args.learned_epochs,
             learning_rate=args.learned_lr,
             weight_decay=args.learned_weight_decay,

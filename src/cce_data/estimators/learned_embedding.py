@@ -18,6 +18,8 @@ class LearnedEmbeddingConfig:
 
     latent_dim: int = 128
     hidden_dim: int = 128
+    merge_strategy: str = "replace"
+    pca_dim: int = 0
     max_epochs: int = 500
     learning_rate: float = 1e-3
     weight_decay: float = 1e-3
@@ -54,8 +56,10 @@ def learn_reward_informed_embeddings(
     Returns
     -------
     z_x, z_a_clinician, z_a_agent, diagnostics
-        Learned embeddings with shape ``(n, latent_dim)`` plus training
-        diagnostics safe to serialize in the Phase 5 JSON report.
+        Learned embeddings with shape ``(n, d_out)`` plus training diagnostics
+        safe to serialize in the Phase 5 JSON report. ``d_out`` is
+        ``latent_dim`` for ``merge_strategy='replace'`` and
+        ``pca_dim + latent_dim`` for ``merge_strategy='concat-pca'``.
     """
     cfg = config or LearnedEmbeddingConfig()
     _validate_inputs(phi_x, phi_a_clinician, phi_a_agent, y_clinician, cfg)
@@ -134,24 +138,44 @@ def learn_reward_informed_embeddings(
 
     model.eval()
     with torch.no_grad():
-        z_x_t = model.encode_context(torch.from_numpy(np.asarray(phi_x, dtype=np.float32)))
-        z_a_cl_t = model.encode_action(
+        learned_x_t = model.encode_context(torch.from_numpy(np.asarray(phi_x, dtype=np.float32)))
+        learned_a_cl_t = model.encode_action(
             torch.from_numpy(np.asarray(phi_a_clinician, dtype=np.float32))
         )
-        z_a_ag_t = model.encode_action(
+        learned_a_ag_t = model.encode_action(
             torch.from_numpy(np.asarray(phi_a_agent, dtype=np.float32))
         )
         if cfg.normalize:
-            z_x_t = torch.nn.functional.normalize(z_x_t, p=2, dim=1)
-            z_a_cl_t = torch.nn.functional.normalize(z_a_cl_t, p=2, dim=1)
-            z_a_ag_t = torch.nn.functional.normalize(z_a_ag_t, p=2, dim=1)
+            learned_x_t = torch.nn.functional.normalize(learned_x_t, p=2, dim=1)
+            learned_a_cl_t = torch.nn.functional.normalize(learned_a_cl_t, p=2, dim=1)
+            learned_a_ag_t = torch.nn.functional.normalize(learned_a_ag_t, p=2, dim=1)
 
         pred_all = model(x, a).cpu().numpy().reshape(-1) * y_std + y_mean
+
+    learned_x = learned_x_t.cpu().numpy().astype(np.float32)
+    learned_a_cl = learned_a_cl_t.cpu().numpy().astype(np.float32)
+    learned_a_ag = learned_a_ag_t.cpu().numpy().astype(np.float32)
+    if cfg.merge_strategy == "concat-pca":
+        z_x, z_a_cl, z_a_ag, pca_diag = _concat_pca_embeddings(
+            phi_x=phi_x,
+            phi_a_clinician=phi_a_clinician,
+            phi_a_agent=phi_a_agent,
+            learned_x=learned_x,
+            learned_a_clinician=learned_a_cl,
+            learned_a_agent=learned_a_ag,
+            pca_dim=cfg.pca_dim,
+            seed=cfg.seed,
+            normalize=cfg.normalize,
+        )
+    else:
+        z_x, z_a_cl, z_a_ag = learned_x, learned_a_cl, learned_a_ag
+        pca_diag = None
 
     y_raw = y_np.reshape(-1)
     train_mse = _mse(pred_all[train_idx], y_raw[train_idx])
     val_mse = _mse(pred_all[val_idx], y_raw[val_idx]) if len(val_idx) > 0 else float("nan")
     baseline_mse = _mse(np.full_like(y_raw, y_mean), y_raw)
+    output_dim = int(z_x.shape[1])
 
     diagnostics = {
         "method": "fine_tune_style_learned_action_embedding",
@@ -159,7 +183,10 @@ def learn_reward_informed_embeddings(
         "base_context_dim": int(phi_x.shape[1]),
         "base_action_dim": int(phi_a_clinician.shape[1]),
         "latent_dim": int(cfg.latent_dim),
-        "feature_dim_after_concat": int(cfg.latent_dim * 3),
+        "merge_strategy": cfg.merge_strategy,
+        "pca_dim": int(cfg.pca_dim),
+        "output_embedding_dim": output_dim,
+        "feature_dim_after_concat": int(output_dim * 3),
         "epochs_trained": int(epochs_trained),
         "best_epoch": int(best_epoch + 1),
         "best_validation_mse_standardized": float(best_metric),
@@ -168,10 +195,12 @@ def learn_reward_informed_embeddings(
         "baseline_mse": baseline_mse,
         "uses_agent_rewards": False,
     }
+    if pca_diag is not None:
+        diagnostics["pca"] = pca_diag
     return (
-        z_x_t.cpu().numpy().astype(np.float32),
-        z_a_cl_t.cpu().numpy().astype(np.float32),
-        z_a_ag_t.cpu().numpy().astype(np.float32),
+        z_x.astype(np.float32),
+        z_a_cl.astype(np.float32),
+        z_a_ag.astype(np.float32),
         diagnostics,
     )
 
@@ -248,6 +277,10 @@ def _validate_inputs(
         raise ValueError("Context, clinician action, agent action, and reward lengths differ.")
     if cfg.latent_dim <= 0 or cfg.hidden_dim <= 0:
         raise ValueError("latent_dim and hidden_dim must be positive.")
+    if cfg.merge_strategy not in {"replace", "concat-pca"}:
+        raise ValueError("merge_strategy must be 'replace' or 'concat-pca'.")
+    if cfg.merge_strategy == "concat-pca" and cfg.pca_dim <= 0:
+        raise ValueError("pca_dim must be positive when merge_strategy='concat-pca'.")
     if cfg.max_epochs <= 0:
         raise ValueError("max_epochs must be positive.")
     if not 0 <= cfg.validation_fraction < 1:
@@ -258,3 +291,52 @@ def _mse(pred: np.ndarray, truth: np.ndarray) -> float:
     pred = np.asarray(pred, dtype=float)
     truth = np.asarray(truth, dtype=float)
     return float(np.mean((pred - truth) ** 2))
+
+
+def _concat_pca_embeddings(
+    phi_x: np.ndarray,
+    phi_a_clinician: np.ndarray,
+    phi_a_agent: np.ndarray,
+    learned_x: np.ndarray,
+    learned_a_clinician: np.ndarray,
+    learned_a_agent: np.ndarray,
+    pca_dim: int,
+    seed: int,
+    normalize: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """Preserve base-embedding geometry via PCA and append learned signal."""
+    from sklearn.decomposition import PCA
+
+    base = np.vstack([
+        np.asarray(phi_x, dtype=np.float32),
+        np.asarray(phi_a_clinician, dtype=np.float32),
+        np.asarray(phi_a_agent, dtype=np.float32),
+    ])
+    max_dim = min(base.shape[0], base.shape[1])
+    if pca_dim > max_dim:
+        raise ValueError(f"pca_dim={pca_dim} exceeds max feasible PCA dim {max_dim}.")
+
+    pca = PCA(n_components=pca_dim, random_state=seed)
+    pca.fit(base)
+    p_x = pca.transform(phi_x).astype(np.float32)
+    p_a_cl = pca.transform(phi_a_clinician).astype(np.float32)
+    p_a_ag = pca.transform(phi_a_agent).astype(np.float32)
+    if normalize:
+        p_x = _l2_normalize(p_x)
+        p_a_cl = _l2_normalize(p_a_cl)
+        p_a_ag = _l2_normalize(p_a_ag)
+
+    z_x = np.concatenate([p_x, learned_x], axis=1)
+    z_a_cl = np.concatenate([p_a_cl, learned_a_clinician], axis=1)
+    z_a_ag = np.concatenate([p_a_ag, learned_a_agent], axis=1)
+    diag = {
+        "explained_variance_ratio_sum": float(pca.explained_variance_ratio_.sum()),
+        "n_components": int(pca_dim),
+        "fit_rows": int(base.shape[0]),
+    }
+    return z_x, z_a_cl, z_a_ag, diag
+
+
+def _l2_normalize(x: np.ndarray) -> np.ndarray:
+    denom = np.linalg.norm(x, axis=1, keepdims=True)
+    return x / np.clip(denom, 1e-12, None)

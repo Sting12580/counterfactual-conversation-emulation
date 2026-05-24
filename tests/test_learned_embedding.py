@@ -41,6 +41,41 @@ def test_learned_embedding_shapes_and_normalization() -> None:
     assert diag["feature_dim_after_concat"] == 18
 
 
+def test_concat_pca_merge_preserves_base_signal_dimension() -> None:
+    rng = np.random.default_rng(1)
+    n, dim = 36, 12
+    phi_x = rng.normal(size=(n, dim)).astype(np.float32)
+    phi_a_cl = rng.normal(size=(n, dim)).astype(np.float32)
+    phi_a_ag = rng.normal(size=(n, dim)).astype(np.float32)
+    y = 0.4 + 0.1 * phi_a_cl[:, 0] + 0.05 * phi_x[:, 1]
+
+    z_x, z_a_cl, z_a_ag, diag = learn_reward_informed_embeddings(
+        phi_x,
+        phi_a_cl,
+        phi_a_ag,
+        y,
+        LearnedEmbeddingConfig(
+            latent_dim=5,
+            hidden_dim=8,
+            merge_strategy="concat-pca",
+            pca_dim=4,
+            max_epochs=20,
+            validation_fraction=0.0,
+            patience=0,
+            seed=1,
+        ),
+    )
+
+    assert z_x.shape == (n, 9)
+    assert z_a_cl.shape == (n, 9)
+    assert z_a_ag.shape == (n, 9)
+    assert diag["merge_strategy"] == "concat-pca"
+    assert diag["pca"]["n_components"] == 4
+    assert diag["output_embedding_dim"] == 9
+    assert diag["feature_dim_after_concat"] == 27
+    assert diag["uses_agent_rewards"] is False
+
+
 def test_phase5_runner_accepts_learned_action_embedding() -> None:
     records = []
     for i in range(30):

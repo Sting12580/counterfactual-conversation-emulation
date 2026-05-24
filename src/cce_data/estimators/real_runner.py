@@ -264,7 +264,8 @@ def run_phase5_headline(
     if learned_embedding is not None:
         print(
             "  Learning reward-informed action embedding "
-            f"(latent_dim={learned_embedding.latent_dim}) ..."
+            f"(latent_dim={learned_embedding.latent_dim}, "
+            f"merge={learned_embedding.merge_strategy}) ..."
         )
         data, learned_diagnostics = apply_learned_action_embedding(data, learned_embedding)
         print(
