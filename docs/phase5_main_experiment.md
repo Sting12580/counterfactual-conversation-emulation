@@ -112,9 +112,8 @@ V_true(π_agent) = 0.8585       (none of the six CIs covers truth)
 - [ ] Phase 6 ablation #3: positivity diagnostics (weight tail, ESS)
 - [ ] Phase 6 ablation #4: conversation length subgroups
 - [x] Phase 6 ablation #5: rubric judge sensitivity (Claude sonnet-4-6) — completed 2026-05-22, ~152 min. See [phase5_sonnet46_judge_ablation.md](phase5_sonnet46_judge_ablation.md).
-- [x] Phase 6 ablation #1: embedding choice (MedCPT 768-d) — completed 2026-05-22, ~82 min. **MIPS bias reduced 43% vs OpenAI.** See [phase5_embedding_ablation.md](phase5_embedding_ablation.md).
+- [x] Phase 6 ablation #1: embedding choice (MedCPT 768-d, BGE-M3 1024-d, MedCPT+BGE concat 1792-d) — completed 2026-05-22 to 2026-05-23. **BGE-M3 won (MIPS bias −52% vs OpenAI); concat did not improve over BGE alone.** See [phase5_embedding_ablation.md](phase5_embedding_ablation.md).
 - [ ] Phase 6 ablation #5 follow-up: third judge (Gemini 2.5 Pro) for triangulation
-- [ ] Phase 6 ablation #1 follow-ups: BGE-M3 alone, MedCPT+BGE-M3 concat
 
 ## Reproduction
 
