@@ -113,6 +113,7 @@ V_true(π_agent) = 0.8585       (none of the six CIs covers truth)
 - [ ] Phase 6 ablation #4: conversation length subgroups
 - [x] Phase 6 ablation #5: rubric judge sensitivity (Claude sonnet-4-6) — completed 2026-05-22, ~152 min. See [phase5_sonnet46_judge_ablation.md](phase5_sonnet46_judge_ablation.md).
 - [x] Phase 6 ablation #1: embedding choice (MedCPT 768-d, BGE-M3 1024-d, MedCPT+BGE concat 1792-d) — completed 2026-05-22 to 2026-05-23. **BGE-M3 won (MIPS bias −52% vs OpenAI); concat did not improve over BGE alone.** See [phase5_embedding_ablation.md](phase5_embedding_ablation.md).
+- [x] CI method upgrade: BCa + jackknife+ conformal — completed 2026-05-24. **Plain 0/12 → BCa 0/12 → Conformal 8/12.** OffCEM emerges as the recommended headline estimator (covers truth with informative CI). See [phase5_ci_methods.md](phase5_ci_methods.md).
 - [ ] Phase 6 ablation #5 follow-up: third judge (Gemini 2.5 Pro) for triangulation
 
 ## Reproduction

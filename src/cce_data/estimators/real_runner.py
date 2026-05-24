@@ -112,7 +112,11 @@ def apply_learned_action_embedding(
 
 
 def dm_real(data: RealData, seed: int = 0) -> dict:
-    """V_DM = mean f_hat(x, phi(a_agent)), f_hat fit on logged clinician tuples."""
+    """V_DM = mean f_hat(x, phi(a_agent)), f_hat fit on logged clinician tuples.
+
+    psi_i := f_hat(x_i, a_agent_i) per-sample so mean(psi) = V_hat. Used
+    downstream for conformal CI.
+    """
     X_train = data.features_at("clinician")
     X_eval = data.features_at("agent")
     f_hat = GradientBoostingRegressor(
@@ -120,7 +124,7 @@ def dm_real(data: RealData, seed: int = 0) -> dict:
     )
     f_hat.fit(X_train, data.y_clinician)
     y_pred = f_hat.predict(X_eval)
-    return {"v_hat": float(y_pred.mean()), "y_pred": y_pred}
+    return {"v_hat": float(y_pred.mean()), "y_pred": y_pred, "psi": y_pred}
 
 
 def mips_real(
@@ -142,7 +146,12 @@ def mips_real(
     w_sum = w.sum()
     v_snips = float((w * data.y_clinician).sum() / w_sum) if w_sum > 0 else float("nan")
     ess = effective_sample_size(w)
-    return {"v_hat": v_snips, "v_mips_unnorm": v_mips, "ess": ess, "weights": w}
+    # Per-sample SNIPS contribution: mean(psi) = V_snips.
+    n = len(data.y_clinician)
+    w_bar = w_sum / n if w_sum > 0 else 1.0
+    psi = (w / w_bar) * data.y_clinician
+    return {"v_hat": v_snips, "v_mips_unnorm": v_mips, "ess": ess,
+            "weights": w, "psi": psi}
 
 
 def offcem_real(
@@ -161,7 +170,8 @@ def offcem_real(
         n_estimators=200, max_depth=3, learning_rate=0.05, random_state=seed
     )
     f_hat.fit(X_b, data.y_clinician)
-    dm_term = float(f_hat.predict(X_t).mean())
+    f_agent_per_sample = f_hat.predict(X_t)
+    dm_term = float(f_agent_per_sample.mean())
 
     clf = fit_density_ratio_classifier(X_t, X_b, seed=seed, C=C, calibrate=calibrate)
     w = density_ratio(clf, X_b, clip=clip)
@@ -170,10 +180,16 @@ def offcem_real(
     w_sum = w.sum()
     correction = float((w * residual).sum() / w_sum) if w_sum > 0 else 0.0
 
+    # Per-sample DR/OffCEM contribution: mean(psi) = V_OffCEM.
+    n = len(data.y_clinician)
+    w_bar = w_sum / n if w_sum > 0 else 1.0
+    psi = f_agent_per_sample + (w / w_bar) * residual
+
     return {
         "v_hat": dm_term + correction,
         "dm_term": dm_term,
         "correction": correction,
+        "psi": psi,
     }
 
 
