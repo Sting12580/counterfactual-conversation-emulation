@@ -101,6 +101,35 @@ PYTHONPATH=src python scripts/run_phase5.py \
   --seed 0
 ```
 
+## Conformal CI
+
+After the learned-embedding headline run is complete, compute jackknife+
+conformal intervals with:
+
+```bash
+PYTHONPATH=src python scripts/compute_learned_conformal_ci.py \
+  --input data/phase3/agent_scored_all_judge_claude_sonnet46.jsonl \
+  --existing-headline data/phase5/headline_sonnet46_bge_pca128_learn64.json \
+  --output data/phase5/conformal_sonnet46_bge_pca128_learn64.json
+```
+
+The script defaults to the current best learned configuration:
+
+```text
+embedder=bge
+learned_merge=concat-pca
+pca_dim=128
+learned_dim=64
+learned_hidden_dim=64
+learned_epochs=100
+learned_weight_decay=1e-2
+```
+
+It also maps the Sonnet-specific judge fields
+`y_score_claude_sonnet46` and `y_agent_score_claude_sonnet46` into the
+standard `y_score` / `y_agent_score` names, so the `.renamed.jsonl` file is
+not required.
+
 ## Caveat
 
 The learned projection is currently fit once on the logged clinician data and
@@ -108,3 +137,7 @@ then treated as a fitted feature map during bootstrap. Bootstrap resamples still
 refit DM/MIPS/OffCEM, but they do not retrain the learned projection. This keeps
 runtime practical for Phase 6 exploration. A stricter, slower follow-up would
 retrain the learned projection inside every bootstrap resample.
+
+The conformal script follows the same practical convention: it fits the learned
+projection once, then computes jackknife+ intervals from the per-sample
+estimator scores.
