@@ -23,6 +23,7 @@ class LearnedEmbeddingConfig:
     max_epochs: int = 500
     learning_rate: float = 1e-3
     weight_decay: float = 1e-3
+    dropout: float = 0.0
     validation_fraction: float = 0.2
     patience: int = 50
     normalize: bool = True
@@ -91,6 +92,7 @@ def learn_reward_informed_embeddings(
         action_dim=a_np.shape[1],
         latent_dim=cfg.latent_dim,
         hidden_dim=cfg.hidden_dim,
+        dropout=cfg.dropout,
     ).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay
@@ -210,6 +212,7 @@ def _build_two_tower_reward_projector(
     action_dim: int,
     latent_dim: int,
     hidden_dim: int,
+    dropout: float = 0.0,
 ):
     """Build the small torch model lazily so importing this file stays light."""
     import torch
@@ -221,18 +224,21 @@ def _build_two_tower_reward_projector(
             self.context = nn.Sequential(
                 nn.Linear(context_dim, hidden_dim),
                 nn.ReLU(),
+                nn.Dropout(dropout),
                 nn.Linear(hidden_dim, latent_dim),
                 nn.Tanh(),
             )
             self.action = nn.Sequential(
                 nn.Linear(action_dim, hidden_dim),
                 nn.ReLU(),
+                nn.Dropout(dropout),
                 nn.Linear(hidden_dim, latent_dim),
                 nn.Tanh(),
             )
             self.reward = nn.Sequential(
                 nn.Linear(latent_dim * 3, hidden_dim),
                 nn.ReLU(),
+                nn.Dropout(dropout),
                 nn.Linear(hidden_dim, 1),
             )
 
@@ -283,6 +289,8 @@ def _validate_inputs(
         raise ValueError("pca_dim must be positive when merge_strategy='concat-pca'.")
     if cfg.max_epochs <= 0:
         raise ValueError("max_epochs must be positive.")
+    if not 0 <= cfg.dropout < 1:
+        raise ValueError("dropout must be in [0, 1).")
     if not 0 <= cfg.validation_fraction < 1:
         raise ValueError("validation_fraction must be in [0, 1).")
 

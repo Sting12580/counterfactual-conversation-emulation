@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -27,6 +28,26 @@ from cce_data.estimators.real_runner import (
 def load_jsonl(path: Path) -> list[dict]:
     with path.open() as f:
         return [json.loads(line) for line in f]
+
+
+def remap_score_fields(
+    records: list[dict],
+    score_field: str | None = None,
+    agent_score_field: str | None = None,
+) -> list[dict]:
+    """Expose judge-specific score fields as the standard Phase 5 score names."""
+    if not score_field and not agent_score_field:
+        return records
+
+    out = []
+    for record in records:
+        row = dict(record)
+        if score_field:
+            row["y_score"] = row.get(score_field)
+        if agent_score_field:
+            row["y_agent_score"] = row.get(agent_score_field)
+        out.append(row)
+    return out
 
 
 def make_sbert_embedder(model_name: str = "all-MiniLM-L6-v2"):
@@ -125,6 +146,9 @@ def make_medcpt_bge_embedder():
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input", type=Path,
@@ -138,6 +162,16 @@ def main() -> None:
         "--embedder",
         choices=["sbert", "openai", "medcpt", "bge", "medcpt-bge"],
         default="sbert",
+    )
+    parser.add_argument(
+        "--score-field",
+        default="",
+        help="Optional source field to expose as y_score before running Phase 5.",
+    )
+    parser.add_argument(
+        "--agent-score-field",
+        default="",
+        help="Optional source field to expose as y_agent_score before running Phase 5.",
     )
     parser.add_argument("--n-boot", type=int, default=100)
     parser.add_argument("--seed", type=int, default=0)
@@ -170,6 +204,7 @@ def main() -> None:
     parser.add_argument("--learned-epochs", type=int, default=500)
     parser.add_argument("--learned-lr", type=float, default=1e-3)
     parser.add_argument("--learned-weight-decay", type=float, default=1e-3)
+    parser.add_argument("--learned-dropout", type=float, default=0.0)
     parser.add_argument("--learned-patience", type=int, default=50)
     parser.add_argument("--learned-validation-fraction", type=float, default=0.2)
     args = parser.parse_args()
@@ -179,6 +214,11 @@ def main() -> None:
 
     print(f"Loading {args.input} ...")
     records = load_jsonl(args.input)
+    records = remap_score_fields(
+        records,
+        score_field=args.score_field or None,
+        agent_score_field=args.agent_score_field or None,
+    )
     print(f"  {len(records)} records loaded")
 
     embedder_factories = {
@@ -199,6 +239,7 @@ def main() -> None:
             max_epochs=args.learned_epochs,
             learning_rate=args.learned_lr,
             weight_decay=args.learned_weight_decay,
+            dropout=args.learned_dropout,
             validation_fraction=args.learned_validation_fraction,
             patience=args.learned_patience,
             seed=args.seed,
