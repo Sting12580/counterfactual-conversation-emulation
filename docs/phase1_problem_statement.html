@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phase 1 Problem Statement</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 0.45in;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #111827;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      font-size: 9.4px;
+      line-height: 1.24;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 7px 0 3px;
+      padding-bottom: 1px;
+      border-bottom: 0.6px solid #d1d5db;
+      font-size: 10.8px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 4px;
+    }
+
+    .subtitle {
+      margin-bottom: 5px;
+      color: #374151;
+      font-size: 9.2px;
+    }
+
+    .equation {
+      margin: 4px 0;
+      padding: 4px 6px;
+      border: 0.6px solid #d1d5db;
+      background: #f9fafb;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 8.9px;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 3px 0 5px;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border: 0.6px solid #d1d5db;
+      padding: 2.3px 3.2px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 700;
+      text-align: left;
+    }
+
+    .symbol {
+      width: 16%;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 8.7px;
+      white-space: nowrap;
+    }
+
+    .meaning {
+      width: 31%;
+    }
+
+    .operational {
+      width: 53%;
+    }
+
+    ul {
+      margin: 2px 0 0 14px;
+      padding: 0;
+    }
+
+    li {
+      margin: 1.5px 0;
+      padding-left: 0;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .compact li {
+      margin: 1.3px 0;
+    }
+
+    .footer {
+      margin-top: 5px;
+      color: #4b5563;
+      font-size: 8.4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Phase 1 Problem Statement: Counterfactual Conversation Emulation</h1>
+  <p class="subtitle">
+    Goal: estimate the causal deployment effect of replacing historical clinician final outputs
+    with a fixed medical AI agent, using retrospective medical conversation data.
+  </p>
+
+  <h2>Problem Formulation</h2>
+  <p>
+    We study historical clinician-patient encounters where a clinician observed a patient context
+    and wrote a final assessment and management plan. The target intervention is not a full
+    multi-turn dialogue policy in v1. Instead, each encounter is one contextual-bandit decision:
+    at time zero observe pre-decision context <b>X</b>, choose a free-form final clinical action
+    <b>A</b> consisting of diagnosis/differential plus management plan, and evaluate a scalar
+    rubric reward <b>Y in [0, 1]</b>.
+  </p>
+  <p>
+    The scientific question is: for encounters drawn from the same population as the logged
+    clinician-note data, what would the expected quality score have been if the fixed agent policy
+    had produced the final clinical output instead of the clinician?
+  </p>
+
+  <h2>Primary Estimand</h2>
+  <div class="equation">
+    V(pi_agent) = E_X [ E_{A ~ pi_agent(.|X)} [ q(X, A) ] ], &nbsp;
+    q(x, a) = E[Y(a) | X = x]
+  </div>
+  <div class="equation">
+    V(pi_b) = E_X [ E_{A ~ pi_b(.|X)} [ q(X, A) ] ], &nbsp;
+    Delta = V(pi_agent) - V(pi_b)
+  </div>
+  <p>
+    <b>Interpretation:</b> Delta is the average change in rubric-defined final clinical-output
+    quality if the fixed agent replaced the clinician final output for the eligible historical
+    encounter population. The logged behavior value is estimated by the empirical mean of
+    clinician scores; the agent value requires off-policy evaluation because rewards are observed
+    only for logged clinician actions.
+  </p>
+
+  <h2>Notation Table</h2>
+  <table>
+    <thead>
+      <tr>
+        <th class="symbol">Symbol</th>
+        <th class="meaning">Meaning</th>
+        <th class="operational">Operational definition in this project</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="symbol">i</td>
+        <td>Encounter index</td>
+        <td>One historical medical conversation paired with a clinician note.</td>
+      </tr>
+      <tr>
+        <td class="symbol">X_i</td>
+        <td>Patient context</td>
+        <td>Information available at time zero; excludes clinician final diagnosis, assessment, plan, and post-decision facts.</td>
+      </tr>
+      <tr>
+        <td class="symbol">A_i^b</td>
+        <td>Behavior action</td>
+        <td>Clinician final diagnosis/differential and management plan extracted from the note.</td>
+      </tr>
+      <tr>
+        <td class="symbol">pi_b</td>
+        <td>Behavior policy</td>
+        <td>Unknown human clinician policy that generated the logged action.</td>
+      </tr>
+      <tr>
+        <td class="symbol">pi_agent</td>
+        <td>Target policy</td>
+        <td>Frozen model, prompt, input template, decoding settings, and tool policy.</td>
+      </tr>
+      <tr>
+        <td class="symbol">Y_i</td>
+        <td>Observed reward</td>
+        <td>Continuous LLM-as-judge clinical quality score for (X_i, A_i^b), normalized to [0, 1].</td>
+      </tr>
+      <tr>
+        <td class="symbol">phi(A)</td>
+        <td>Action representation</td>
+        <td>Embedding or cluster representation used for large-language-action OPE.</td>
+      </tr>
+      <tr>
+        <td class="symbol">E_i</td>
+        <td>Embedded action</td>
+        <td>E_i = phi(A_i^b); target-agent actions also receive E_i^agent = phi(A_i^agent).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="two-col">
+    <section>
+      <h2>Identification Assumptions</h2>
+      <ul class="compact">
+        <li><b>Consistency:</b> observed clinician reward equals the potential reward under the observed action.</li>
+        <li><b>Time-zero validity:</b> X contains only pre-decision information.</li>
+        <li><b>Fixed target policy:</b> pi_agent is frozen before evaluation.</li>
+        <li><b>No interference:</b> one encounter's action does not affect another encounter's reward.</li>
+        <li><b>Conditional exchangeability:</b> given X, rubric reward for an action is comparable between logged clinician and counterfactual agent settings.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Estimator-Specific Assumptions</h2>
+      <ul class="compact">
+        <li><b>Common embedding support:</b> agent action embeddings lie in clinician-covered regions for comparable X.</li>
+        <li><b>MIPS no direct effect:</b> action effects on Y are mediated by phi(A); exact wording has no residual effect after conditioning on X and embedding.</li>
+        <li><b>OffCEM local correctness:</b> residual reward modeling captures within-cluster language effects sufficiently for doubly robust correction.</li>
+        <li><b>Rubric validity:</b> Y is a surrogate clinical-output quality measure, not a validated patient outcome.</li>
+      </ul>
+    </section>
+  </div>
+
+  <h2>Scope Decision</h2>
+  <p>
+    Exact sequence-level IPS is not viable because free-form language actions have near-zero exact
+    overlap and the clinician behavior policy is unknown. The v1 benchmark therefore evaluates
+    final-output replacement using embedding-space OPE and OffCEM-style robustness checks, while
+    deferring full multi-turn dialogue-policy evaluation to future work.
+  </p>
+
+  <p class="footer">
+    Deliverable for onboarding Phase 1: one-page problem statement with estimand, assumptions, and notation table.
+  </p>
+</body>
+</html>

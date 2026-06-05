@@ -1,0 +1,24 @@
+{
+  "input": "data/ayers_askdocs_quality/phase3_chatgpt_expert_scored.jsonl",
+  "n_paired": 195,
+  "clinician_score_field": "y_score",
+  "agent_score_field": "y_agent_score",
+  "v_true_pi_b": 0.5641025641025641,
+  "v_true_pi_agent": 0.7829059829059829,
+  "true_effect": 0.2188034188034188,
+  "bootstrap": {
+    "n": 1000,
+    "seed": 20260509,
+    "ci95": [
+      0.18673076923076923,
+      0.2525747863247863
+    ]
+  },
+  "summary": {
+    "clinician_min": 0.0,
+    "clinician_max": 1.0,
+    "agent_min": 0.25,
+    "agent_max": 1.0,
+    "direction_agent_better_rate": 0.8
+  }
+}

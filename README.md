@@ -169,6 +169,30 @@ The default reward is a normalized composite of expert `overall`, `empathy`, `sp
 `factual_consistency`, low `toxicity`, and low unauthorized `medical_advice` rate. Use
 `--reward-mode overall` if you want the expert overall score only.
 
+## Ayers AskDocs Expert Labels
+
+Ayers et al. 2023 AskDocs replication data can be converted into the same Phase 2/3
+paired shape. The converter uses the physician response as the behavior-policy baseline,
+the ChatGPT response as the logged target policy, and the three healthcare-professional
+quality/empathy ratings as the reward source.
+
+```bash
+cce-build-ayers-askdocs --output-dir data/ayers_askdocs
+```
+
+Expected outputs:
+
+```text
+data/ayers_askdocs/phase2_dataset.jsonl
+data/ayers_askdocs/phase3_chatgpt_expert_scored.jsonl
+data/ayers_askdocs/ground_truth_effect_chatgpt.json
+```
+
+The default reward is `mean(normalized quality, normalized empathy)`, where each 1-5
+Likert score is mapped to `[0, 1]`. Use `--reward-mode quality` or
+`--reward-mode empathy` for single-dimension ablations. Pass `--input path/to/file.csv`
+to build from a local copy of the Harvard Dataverse CSV instead of downloading it.
+
 ## Canonical Schema
 
 | Column | Meaning |

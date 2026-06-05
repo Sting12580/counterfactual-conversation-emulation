@@ -1,0 +1,31 @@
+{
+  "input": "data/phase3/agent_scored_all_judge_claude_sonnet46.jsonl",
+  "run_name": "sonnet46",
+  "score_field": "y_score_claude_sonnet46",
+  "agent_score_field": "y_agent_score_claude_sonnet46",
+  "embedder": "bge",
+  "learned_action_embedding": true,
+  "n_boot": 100,
+  "seed": 0,
+  "sources": {
+    "aci_bench": {
+      "n_input": 207,
+      "split_path": "data/phase3/by_source/agent_scored_sonnet46_aci_bench.jsonl",
+      "n_phase5": 207,
+      "output_path": "data/phase5/by_source/headline_sonnet46_aci_bench_bge_pca128_learn64.json"
+    },
+    "mts_dialog": {
+      "n_input": 142,
+      "split_path": "data/phase3/by_source/agent_scored_sonnet46_mts_dialog.jsonl",
+      "n_phase5": 142,
+      "output_path": "data/phase5/by_source/headline_sonnet46_mts_dialog_bge_pca128_learn64.json"
+    },
+    "primock57": {
+      "n_input": 48,
+      "split_path": "data/phase3/by_source/agent_scored_sonnet46_primock57.jsonl",
+      "n_phase5": 48,
+      "output_path": "data/phase5/by_source/headline_sonnet46_primock57_bge_pca128_learn64.json"
+    }
+  },
+  "wall_time_seconds": 952.3383376598358
+}

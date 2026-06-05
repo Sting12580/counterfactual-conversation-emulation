@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from cce_data.agent import generate_agent_actions
+from cce_data.ayers_askdocs import build_ayers_askdocs_dataset
 from cce_data.build import build_dataset
 from cce_data.counselbench import build_counselbench_dataset
 from cce_data.download import download_sources
@@ -69,6 +70,30 @@ def build_counselbench_main() -> None:
     args = parser.parse_args()
     manifest = build_counselbench_dataset(
         output_dir=Path(args.output_dir),
+        reward_mode=args.reward_mode,
+        bootstrap=args.bootstrap,
+        seed=args.seed,
+    )
+    print(json.dumps(manifest, indent=2, ensure_ascii=False))
+
+
+def build_ayers_askdocs_main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Build expert-labeled Ayers AskDocs files in the Phase 2/3 schema."
+    )
+    parser.add_argument("--output-dir", default="data/ayers_askdocs")
+    parser.add_argument(
+        "--input",
+        type=Path,
+        help="Optional local CSV path. Defaults to the Harvard Dataverse datafile URL.",
+    )
+    parser.add_argument("--reward-mode", choices=["composite", "quality", "empathy"], default="composite")
+    parser.add_argument("--bootstrap", type=int, default=1000)
+    parser.add_argument("--seed", type=int, default=20260509)
+    args = parser.parse_args()
+    manifest = build_ayers_askdocs_dataset(
+        output_dir=Path(args.output_dir),
+        input_path=args.input,
         reward_mode=args.reward_mode,
         bootstrap=args.bootstrap,
         seed=args.seed,
