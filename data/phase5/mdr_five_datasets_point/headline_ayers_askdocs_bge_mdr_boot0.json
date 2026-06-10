@@ -1,0 +1,27 @@
+{
+  "n": 195,
+  "n_boot": 0,
+  "v_true_b": 0.4254273504273504,
+  "v_true_agent": 0.7232905982905984,
+  "true_effect": 0.29786324786324797,
+  "results": {
+    "MDR": {
+      "v_hat": 0.5542773689751228,
+      "bias": -0.16901322931547558,
+      "rel_bias": -0.23367264791622616,
+      "direction_correct": true
+    }
+  },
+  "dataset": {
+    "name": "ayers_askdocs",
+    "display_name": "Ayers AskDocs",
+    "input_paths": [
+      "data/ayers_askdocs/phase3_chatgpt_expert_scored.jsonl"
+    ],
+    "notes": "Composite healthcare-professional reward: mean quality/empathy."
+  },
+  "embedding": {
+    "name": "BGE-M3",
+    "learned_action_embedding": false
+  }
+}

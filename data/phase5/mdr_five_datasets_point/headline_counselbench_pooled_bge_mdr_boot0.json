@@ -1,0 +1,29 @@
+{
+  "n": 300,
+  "n_boot": 0,
+  "v_true_b": 0.5190666666666668,
+  "v_true_agent": 0.7208277777777777,
+  "true_effect": 0.20176111111111095,
+  "results": {
+    "MDR": {
+      "v_hat": 0.5496226444267447,
+      "bias": -0.17120513335103305,
+      "rel_bias": -0.23751184211967682,
+      "direction_correct": true
+    }
+  },
+  "dataset": {
+    "name": "counselbench_pooled",
+    "display_name": "CounselBench-Eval pooled",
+    "input_paths": [
+      "data/counselbench/phase3_gemini_expert_scored.jsonl",
+      "data/counselbench/phase3_gpt4_expert_scored.jsonl",
+      "data/counselbench/phase3_llama3_expert_scored.jsonl"
+    ],
+    "notes": "Pooled GPT-4, LLaMA-3, and Gemini target responders."
+  },
+  "embedding": {
+    "name": "BGE-M3",
+    "learned_action_embedding": false
+  }
+}

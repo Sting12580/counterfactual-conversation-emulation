@@ -1,0 +1,27 @@
+{
+  "n": 142,
+  "n_boot": 0,
+  "v_true_b": 0.4397183098591549,
+  "v_true_agent": 0.7873943661971831,
+  "true_effect": 0.34767605633802817,
+  "results": {
+    "MDR": {
+      "v_hat": 0.5326949656623142,
+      "bias": -0.25469940053486884,
+      "rel_bias": -0.3234712000353401,
+      "direction_correct": true
+    }
+  },
+  "dataset": {
+    "name": "mts_dialog",
+    "display_name": "MTS-Dialog",
+    "input_paths": [
+      "data/phase3/by_source/agent_scored_sonnet46_mts_dialog.jsonl"
+    ],
+    "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset."
+  },
+  "embedding": {
+    "name": "BGE-M3",
+    "learned_action_embedding": false
+  }
+}

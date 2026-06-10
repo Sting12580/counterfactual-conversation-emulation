@@ -20,6 +20,7 @@ import numpy as np
 
 from cce_data.estimators.learned_embedding import LearnedEmbeddingConfig
 from cce_data.estimators.real_runner import (
+    ESTIMATORS,
     format_headline_table,
     run_phase5_headline,
 )
@@ -176,6 +177,13 @@ def main() -> None:
     parser.add_argument("--n-boot", type=int, default=100)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
+        "--estimators",
+        nargs="+",
+        choices=sorted(ESTIMATORS),
+        default=["DM", "MIPS", "OffCEM"],
+        help="Estimator(s) to run.",
+    )
+    parser.add_argument(
         "--learned-action-embedding",
         action="store_true",
         help=(
@@ -252,6 +260,7 @@ def main() -> None:
         n_boot=args.n_boot,
         seed=args.seed,
         learned_embedding=learned_config,
+        estimator_names=args.estimators,
     )
     print()
     print(format_headline_table(report))

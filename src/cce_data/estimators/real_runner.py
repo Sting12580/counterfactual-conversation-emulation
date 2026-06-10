@@ -193,6 +193,58 @@ def offcem_real(
     }
 
 
+def mdr_real(
+    data: RealData, seed: int = 0, clip: float = 20.0,
+    C: float = 0.1, calibrate: bool = True,
+) -> dict:
+    """Marginalized doubly robust estimator in embedding space.
+
+    MDR uses the standard unnormalized DR correction:
+
+        mean_i q_hat(x_i, a_agent_i)
+          + w_phi(x_i, a_clinician_i) * (y_i - q_hat(x_i, a_clinician_i))
+
+    where w_phi is the marginal target/behavior density ratio over
+    [phi_x; phi_a; phi_x * phi_a]. This intentionally differs from the
+    current real-data OffCEM implementation, which self-normalizes the
+    residual correction for stability.
+    """
+    X_b = data.features_at("clinician")
+    X_t = data.features_at("agent")
+
+    f_hat = GradientBoostingRegressor(
+        n_estimators=200, max_depth=3, learning_rate=0.05, random_state=seed
+    )
+    f_hat.fit(X_b, data.y_clinician)
+    f_agent_per_sample = f_hat.predict(X_t)
+    f_behavior_per_sample = f_hat.predict(X_b)
+    residual = data.y_clinician - f_behavior_per_sample
+
+    clf = fit_density_ratio_classifier(X_t, X_b, seed=seed, C=C, calibrate=calibrate)
+    w = density_ratio(clf, X_b, clip=clip)
+
+    psi = f_agent_per_sample + w * residual
+    dm_term = float(f_agent_per_sample.mean())
+    correction = float((w * residual).mean())
+
+    return {
+        "v_hat": float(psi.mean()),
+        "dm_term": dm_term,
+        "correction": correction,
+        "ess": effective_sample_size(w),
+        "weights": w,
+        "psi": psi,
+    }
+
+
+ESTIMATORS: dict[str, Callable[[RealData, int], dict]] = {
+    "DM": dm_real,
+    "MIPS": mips_real,
+    "OffCEM": offcem_real,
+    "MDR": mdr_real,
+}
+
+
 def bootstrap_run(
     estimator: Callable[[RealData, int], dict],
     data: RealData,
@@ -253,6 +305,7 @@ def run_phase5_headline(
     n_boot: int = 100,
     seed: int = 0,
     learned_embedding: LearnedEmbeddingConfig | None = None,
+    estimator_names: list[str] | None = None,
 ) -> dict:
     """Top-level Phase 5 main-experiment runner.
 
@@ -274,9 +327,30 @@ def run_phase5_headline(
             f"(train MSE={learned_diagnostics['train_mse']:.4f}, "
             f"val MSE={learned_diagnostics['validation_mse']:.4f})"
         )
+    return run_estimators_on_data(
+        data,
+        n_boot=n_boot,
+        seed=seed,
+        estimator_names=estimator_names,
+        learned_diagnostics=learned_diagnostics,
+    )
+
+
+def run_estimators_on_data(
+    data: RealData,
+    n_boot: int = 100,
+    seed: int = 0,
+    estimator_names: list[str] | None = None,
+    learned_diagnostics: dict | None = None,
+) -> dict:
+    """Run selected estimators on already-featurized real data."""
     v_true_b = float(data.y_clinician.mean())
     v_true_agent = float(data.y_agent.mean())
     true_effect = v_true_agent - v_true_b
+    names = estimator_names or ["DM", "MIPS", "OffCEM"]
+    unknown = sorted(set(names) - set(ESTIMATORS))
+    if unknown:
+        raise ValueError(f"Unknown estimator(s): {', '.join(unknown)}")
 
     print()
     print(f"Ground truth: V_b={v_true_b:.4f}  V_agent={v_true_agent:.4f}  "
@@ -285,7 +359,8 @@ def run_phase5_headline(
     print()
 
     results = {}
-    for name, est in [("DM", dm_real), ("MIPS", mips_real), ("OffCEM", offcem_real)]:
+    for name in names:
+        est = ESTIMATORS[name]
         point = est(data, seed=seed)["v_hat"]
         bias = point - v_true_agent
         direction = (point - v_true_b > 0) == (true_effect > 0)
@@ -309,6 +384,7 @@ def run_phase5_headline(
 
     report = {
         "n": data.n,
+        "n_boot": n_boot,
         "v_true_b": v_true_b,
         "v_true_agent": v_true_agent,
         "true_effect": true_effect,
@@ -327,7 +403,7 @@ def format_headline_table(report: dict) -> str:
     """Pretty-print the Phase 5 headline table."""
     lines = []
     lines.append("=" * 80)
-    lines.append(f"Phase 5 Headline Table (n={report['n']}, n_boot=100)")
+    lines.append(f"Phase 5 Headline Table (n={report['n']}, n_boot={report.get('n_boot', 100)})")
     lines.append("=" * 80)
     lines.append(f"V_true(pi_b)     = {report['v_true_b']:.4f}")
     lines.append(f"V_true(pi_agent) = {report['v_true_agent']:.4f}")

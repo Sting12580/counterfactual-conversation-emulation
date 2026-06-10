@@ -1,0 +1,50 @@
+{
+  "source": "Ayers et al. 2023 AskDocs physician vs ChatGPT replication data",
+  "source_url": "https://doi.org/10.7910/DVN/BZARC3",
+  "datafile_url": "https://dataverse.harvard.edu/api/access/datafile/7001793?format=original",
+  "input_path": "data/raw/ayers_askdocs_2023/ayers_askdocs_2023.csv",
+  "output_dir": "data/ayers_askdocs_empathy",
+  "reward_mode": "empathy",
+  "reward_formula": "normalized empathy only",
+  "normalization": "Likert 1-5 mapped to [0, 1] by (score - 1) / 4",
+  "raw_rows": 195,
+  "paired_rows": 195,
+  "human_baseline_rows": 195,
+  "target_counts": {
+    "chatgpt": 195
+  },
+  "effect": {
+    "input": "data/ayers_askdocs_empathy/phase3_chatgpt_expert_scored.jsonl",
+    "n_paired": 195,
+    "clinician_score_field": "y_score",
+    "agent_score_field": "y_agent_score",
+    "v_true_pi_b": 0.28675213675213673,
+    "v_true_pi_agent": 0.6636752136752136,
+    "true_effect": 0.3769230769230769,
+    "bootstrap": {
+      "n": 1000,
+      "seed": 20260509,
+      "ci95": [
+        0.3435790598290598,
+        0.4124038461538461
+      ]
+    },
+    "summary": {
+      "clinician_min": 0.0,
+      "clinician_max": 1.0,
+      "agent_min": 0.25,
+      "agent_max": 1.0,
+      "direction_agent_better_rate": 0.9076923076923077
+    }
+  },
+  "files": {
+    "phase2": "data/ayers_askdocs_empathy/phase2_dataset.jsonl",
+    "aggregated_csv": "data/ayers_askdocs_empathy/ayers_askdocs_aggregated.csv",
+    "phase3_targets": {
+      "chatgpt": "data/ayers_askdocs_empathy/phase3_chatgpt_expert_scored.jsonl"
+    },
+    "effects": {
+      "chatgpt": "data/ayers_askdocs_empathy/ground_truth_effect_chatgpt.json"
+    }
+  }
+}

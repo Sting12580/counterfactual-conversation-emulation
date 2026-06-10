@@ -1,0 +1,66 @@
+{
+  "n": 207,
+  "n_boot": 0,
+  "v_true_b": 0.74231884057971,
+  "v_true_agent": 0.8726570048309179,
+  "true_effect": 0.13033816425120792,
+  "results": {
+    "MDR": {
+      "v_hat": 0.773068932958884,
+      "bias": -0.09958807187203389,
+      "rel_bias": -0.11412052080110172,
+      "direction_correct": true
+    }
+  },
+  "learned_embedding": {
+    "method": "fine_tune_style_learned_action_embedding",
+    "config": {
+      "latent_dim": 64,
+      "hidden_dim": 64,
+      "merge_strategy": "concat-pca",
+      "pca_dim": 128,
+      "max_epochs": 100,
+      "learning_rate": 0.001,
+      "weight_decay": 0.01,
+      "dropout": 0.0,
+      "validation_fraction": 0.2,
+      "patience": 50,
+      "normalize": true,
+      "seed": 0
+    },
+    "base_context_dim": 1024,
+    "base_action_dim": 1024,
+    "latent_dim": 64,
+    "merge_strategy": "concat-pca",
+    "pca_dim": 128,
+    "output_embedding_dim": 192,
+    "feature_dim_after_concat": 576,
+    "epochs_trained": 89,
+    "best_epoch": 39,
+    "best_validation_mse_standardized": 0.6592922806739807,
+    "train_mse": 0.0043963807181515695,
+    "validation_mse": 0.007966709050831598,
+    "baseline_mse": 0.012083510769635823,
+    "uses_agent_rewards": false,
+    "pca": {
+      "explained_variance_ratio_sum": 0.8927118182182312,
+      "n_components": 128,
+      "fit_rows": 621
+    },
+    "bootstrap_refits_learned_embedding": false
+  },
+  "dataset": {
+    "name": "aci_bench",
+    "display_name": "ACI-Bench",
+    "input_paths": [
+      "data/phase3/by_source/agent_scored_sonnet46_aci_bench.jsonl"
+    ],
+    "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset."
+  },
+  "embedding": {
+    "name": "BGE-M3 + learned concat-PCA",
+    "learned_action_embedding": true,
+    "pca_dim": 128,
+    "learned_dim": 64
+  }
+}

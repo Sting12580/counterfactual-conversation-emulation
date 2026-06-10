@@ -1,0 +1,27 @@
+{
+  "n": 207,
+  "n_boot": 0,
+  "v_true_b": 0.74231884057971,
+  "v_true_agent": 0.8726570048309179,
+  "true_effect": 0.13033816425120792,
+  "results": {
+    "MDR": {
+      "v_hat": 0.7582660169481378,
+      "bias": -0.11439098788278013,
+      "rel_bias": -0.13108356118099804,
+      "direction_correct": true
+    }
+  },
+  "dataset": {
+    "name": "aci_bench",
+    "display_name": "ACI-Bench",
+    "input_paths": [
+      "data/phase3/by_source/agent_scored_sonnet46_aci_bench.jsonl"
+    ],
+    "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset."
+  },
+  "embedding": {
+    "name": "BGE-M3",
+    "learned_action_embedding": false
+  }
+}

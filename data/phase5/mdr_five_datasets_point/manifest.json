@@ -1,0 +1,70 @@
+{
+  "n_boot": 0,
+  "seed": 0,
+  "counselbench_mode": "pooled",
+  "estimator": "MDR",
+  "embeddings": [
+    "bge",
+    "bge_pca128_learn64"
+  ],
+  "datasets": {
+    "aci_bench": {
+      "display_name": "ACI-Bench",
+      "input_paths": [
+        "data/phase3/by_source/agent_scored_sonnet46_aci_bench.jsonl"
+      ],
+      "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset.",
+      "outputs": {
+        "bge": "data/phase5/mdr_five_datasets_point/headline_aci_bench_bge_mdr_boot0.json",
+        "bge_pca128_learn64": "data/phase5/mdr_five_datasets_point/headline_aci_bench_bge_pca128_learn64_mdr_boot0.json"
+      }
+    },
+    "mts_dialog": {
+      "display_name": "MTS-Dialog",
+      "input_paths": [
+        "data/phase3/by_source/agent_scored_sonnet46_mts_dialog.jsonl"
+      ],
+      "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset.",
+      "outputs": {
+        "bge": "data/phase5/mdr_five_datasets_point/headline_mts_dialog_bge_mdr_boot0.json",
+        "bge_pca128_learn64": "data/phase5/mdr_five_datasets_point/headline_mts_dialog_bge_pca128_learn64_mdr_boot0.json"
+      }
+    },
+    "primock57": {
+      "display_name": "PriMock57",
+      "input_paths": [
+        "data/phase3/by_source/agent_scored_sonnet46_primock57.jsonl"
+      ],
+      "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset.",
+      "outputs": {
+        "bge": "data/phase5/mdr_five_datasets_point/headline_primock57_bge_mdr_boot0.json",
+        "bge_pca128_learn64": "data/phase5/mdr_five_datasets_point/headline_primock57_bge_pca128_learn64_mdr_boot0.json"
+      }
+    },
+    "counselbench_pooled": {
+      "display_name": "CounselBench-Eval pooled",
+      "input_paths": [
+        "data/counselbench/phase3_gemini_expert_scored.jsonl",
+        "data/counselbench/phase3_gpt4_expert_scored.jsonl",
+        "data/counselbench/phase3_llama3_expert_scored.jsonl"
+      ],
+      "notes": "Pooled GPT-4, LLaMA-3, and Gemini target responders.",
+      "outputs": {
+        "bge": "data/phase5/mdr_five_datasets_point/headline_counselbench_pooled_bge_mdr_boot0.json",
+        "bge_pca128_learn64": "data/phase5/mdr_five_datasets_point/headline_counselbench_pooled_bge_pca128_learn64_mdr_boot0.json"
+      }
+    },
+    "ayers_askdocs": {
+      "display_name": "Ayers AskDocs",
+      "input_paths": [
+        "data/ayers_askdocs/phase3_chatgpt_expert_scored.jsonl"
+      ],
+      "notes": "Composite healthcare-professional reward: mean quality/empathy.",
+      "outputs": {
+        "bge": "data/phase5/mdr_five_datasets_point/headline_ayers_askdocs_bge_mdr_boot0.json",
+        "bge_pca128_learn64": "data/phase5/mdr_five_datasets_point/headline_ayers_askdocs_bge_pca128_learn64_mdr_boot0.json"
+      }
+    }
+  },
+  "wall_time_seconds": 215.43851590156555
+}

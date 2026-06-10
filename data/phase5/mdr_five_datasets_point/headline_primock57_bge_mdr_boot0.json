@@ -1,0 +1,27 @@
+{
+  "n": 48,
+  "n_boot": 0,
+  "v_true_b": 0.6072916666666667,
+  "v_true_agent": 0.865625,
+  "true_effect": 0.2583333333333333,
+  "results": {
+    "MDR": {
+      "v_hat": 0.556584751842561,
+      "bias": -0.309040248157439,
+      "rel_bias": -0.35701400509162634,
+      "direction_correct": false
+    }
+  },
+  "dataset": {
+    "name": "primock57",
+    "display_name": "PriMock57",
+    "input_paths": [
+      "data/phase3/by_source/agent_scored_sonnet46_primock57.jsonl"
+    ],
+    "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset."
+  },
+  "embedding": {
+    "name": "BGE-M3",
+    "learned_action_embedding": false
+  }
+}

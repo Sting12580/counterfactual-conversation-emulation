@@ -1,0 +1,66 @@
+{
+  "n": 142,
+  "n_boot": 0,
+  "v_true_b": 0.4397183098591549,
+  "v_true_agent": 0.7873943661971831,
+  "true_effect": 0.34767605633802817,
+  "results": {
+    "MDR": {
+      "v_hat": 0.5174964356309814,
+      "bias": -0.2698979305662017,
+      "rel_bias": -0.3427735098864202,
+      "direction_correct": true
+    }
+  },
+  "learned_embedding": {
+    "method": "fine_tune_style_learned_action_embedding",
+    "config": {
+      "latent_dim": 64,
+      "hidden_dim": 64,
+      "merge_strategy": "concat-pca",
+      "pca_dim": 128,
+      "max_epochs": 100,
+      "learning_rate": 0.001,
+      "weight_decay": 0.01,
+      "dropout": 0.0,
+      "validation_fraction": 0.2,
+      "patience": 50,
+      "normalize": true,
+      "seed": 0
+    },
+    "base_context_dim": 1024,
+    "base_action_dim": 1024,
+    "latent_dim": 64,
+    "merge_strategy": "concat-pca",
+    "pca_dim": 128,
+    "output_embedding_dim": 192,
+    "feature_dim_after_concat": 576,
+    "epochs_trained": 100,
+    "best_epoch": 65,
+    "best_validation_mse_standardized": 0.7254924178123474,
+    "train_mse": 0.0007869018601572721,
+    "validation_mse": 0.02171591695534813,
+    "baseline_mse": 0.02993231579048553,
+    "uses_agent_rewards": false,
+    "pca": {
+      "explained_variance_ratio_sum": 0.9249202609062195,
+      "n_components": 128,
+      "fit_rows": 426
+    },
+    "bootstrap_refits_learned_embedding": false
+  },
+  "dataset": {
+    "name": "mts_dialog",
+    "display_name": "MTS-Dialog",
+    "input_paths": [
+      "data/phase3/by_source/agent_scored_sonnet46_mts_dialog.jsonl"
+    ],
+    "notes": "Sonnet 4.6 judged source split from the mixed medical dialogue dataset."
+  },
+  "embedding": {
+    "name": "BGE-M3 + learned concat-PCA",
+    "learned_action_embedding": true,
+    "pca_dim": 128,
+    "learned_dim": 64
+  }
+}

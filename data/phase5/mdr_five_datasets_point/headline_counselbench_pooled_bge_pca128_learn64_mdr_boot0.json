@@ -1,0 +1,68 @@
+{
+  "n": 300,
+  "n_boot": 0,
+  "v_true_b": 0.5190666666666668,
+  "v_true_agent": 0.7208277777777777,
+  "true_effect": 0.20176111111111095,
+  "results": {
+    "MDR": {
+      "v_hat": 0.5555520293523574,
+      "bias": -0.16527574842542037,
+      "rel_bias": -0.22928604240938788,
+      "direction_correct": true
+    }
+  },
+  "learned_embedding": {
+    "method": "fine_tune_style_learned_action_embedding",
+    "config": {
+      "latent_dim": 64,
+      "hidden_dim": 64,
+      "merge_strategy": "concat-pca",
+      "pca_dim": 128,
+      "max_epochs": 100,
+      "learning_rate": 0.001,
+      "weight_decay": 0.01,
+      "dropout": 0.0,
+      "validation_fraction": 0.2,
+      "patience": 50,
+      "normalize": true,
+      "seed": 0
+    },
+    "base_context_dim": 1024,
+    "base_action_dim": 1024,
+    "latent_dim": 64,
+    "merge_strategy": "concat-pca",
+    "pca_dim": 128,
+    "output_embedding_dim": 192,
+    "feature_dim_after_concat": 576,
+    "epochs_trained": 100,
+    "best_epoch": 100,
+    "best_validation_mse_standardized": 0.0003709120792336762,
+    "train_mse": 5.453440759896807e-06,
+    "validation_mse": 9.869228873167953e-06,
+    "baseline_mse": 0.026607643135014878,
+    "uses_agent_rewards": false,
+    "pca": {
+      "explained_variance_ratio_sum": 0.9357718229293823,
+      "n_components": 128,
+      "fit_rows": 900
+    },
+    "bootstrap_refits_learned_embedding": false
+  },
+  "dataset": {
+    "name": "counselbench_pooled",
+    "display_name": "CounselBench-Eval pooled",
+    "input_paths": [
+      "data/counselbench/phase3_gemini_expert_scored.jsonl",
+      "data/counselbench/phase3_gpt4_expert_scored.jsonl",
+      "data/counselbench/phase3_llama3_expert_scored.jsonl"
+    ],
+    "notes": "Pooled GPT-4, LLaMA-3, and Gemini target responders."
+  },
+  "embedding": {
+    "name": "BGE-M3 + learned concat-PCA",
+    "learned_action_embedding": true,
+    "pca_dim": 128,
+    "learned_dim": 64
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "n": 195,
+  "n_boot": 0,
+  "v_true_b": 0.4254273504273504,
+  "v_true_agent": 0.7232905982905984,
+  "true_effect": 0.29786324786324797,
+  "results": {
+    "MDR": {
+      "v_hat": 0.5599689518531586,
+      "bias": -0.16332164643743974,
+      "rel_bias": -0.22580363525176303,
+      "direction_correct": true
+    }
+  },
+  "learned_embedding": {
+    "method": "fine_tune_style_learned_action_embedding",
+    "config": {
+      "latent_dim": 64,
+      "hidden_dim": 64,
+      "merge_strategy": "concat-pca",
+      "pca_dim": 128,
+      "max_epochs": 100,
+      "learning_rate": 0.001,
+      "weight_decay": 0.01,
+      "dropout": 0.0,
+      "validation_fraction": 0.2,
+      "patience": 50,
+      "normalize": true,
+      "seed": 0
+    },
+    "base_context_dim": 1024,
+    "base_action_dim": 1024,
+    "latent_dim": 64,
+    "merge_strategy": "concat-pca",
+    "pca_dim": 128,
+    "output_embedding_dim": 192,
+    "feature_dim_after_concat": 576,
+    "epochs_trained": 81,
+    "best_epoch": 31,
+    "best_validation_mse_standardized": 0.4631931185722351,
+    "train_mse": 0.00911727723129983,
+    "validation_mse": 0.014855912073688228,
+    "baseline_mse": 0.03207246699235473,
+    "uses_agent_rewards": false,
+    "pca": {
+      "explained_variance_ratio_sum": 0.8712271451950073,
+      "n_components": 128,
+      "fit_rows": 585
+    },
+    "bootstrap_refits_learned_embedding": false
+  },
+  "dataset": {
+    "name": "ayers_askdocs",
+    "display_name": "Ayers AskDocs",
+    "input_paths": [
+      "data/ayers_askdocs/phase3_chatgpt_expert_scored.jsonl"
+    ],
+    "notes": "Composite healthcare-professional reward: mean quality/empathy."
+  },
+  "embedding": {
+    "name": "BGE-M3 + learned concat-PCA",
+    "learned_action_embedding": true,
+    "pca_dim": 128,
+    "learned_dim": 64
+  }
+}
