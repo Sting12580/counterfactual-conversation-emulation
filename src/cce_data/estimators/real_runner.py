@@ -44,20 +44,70 @@ class RealData:
     phi_a_agent: np.ndarray      # (n, d_a)
     y_clinician: np.ndarray      # (n,)
     y_agent: np.ndarray          # (n,)
+    extra_clinician: np.ndarray | None = None  # (n, d_extra)
+    extra_agent: np.ndarray | None = None      # (n, d_extra)
     n: int = field(init=False)
 
     def __post_init__(self) -> None:
         self.n = len(self.y_clinician)
+        if len(self.y_agent) != self.n:
+            raise ValueError("y_clinician and y_agent lengths differ.")
+        self._validate_feature_matrix("phi_x", self.phi_x)
+        self._validate_feature_matrix("phi_a_clinician", self.phi_a_clinician)
+        self._validate_feature_matrix("phi_a_agent", self.phi_a_agent)
+        if self.extra_clinician is not None:
+            self._validate_feature_matrix("extra_clinician", self.extra_clinician)
+        if self.extra_agent is not None:
+            self._validate_feature_matrix("extra_agent", self.extra_agent)
 
     def features_at(self, which: str) -> np.ndarray:
-        """which in {'clinician', 'agent'}: returns [phi_x ; phi_a ; phi_x*phi_a]."""
+        """which in {'clinician', 'agent'}: returns [phi_x ; phi_a ; phi_x*phi_a ; extra]."""
         if which == "clinician":
             phi_a = self.phi_a_clinician
+            extra = self.extra_clinician
         elif which == "agent":
             phi_a = self.phi_a_agent
+            extra = self.extra_agent
         else:
             raise ValueError(which)
-        return np.concatenate([self.phi_x, phi_a, self.phi_x * phi_a], axis=1)
+
+        phi_x = np.asarray(self.phi_x)
+        phi_a = np.asarray(phi_a)
+        x_dim = phi_x.shape[1]
+        a_dim = phi_a.shape[1]
+        blocks = [phi_x, phi_a]
+        if x_dim > 0 and a_dim > 0:
+            if x_dim != a_dim:
+                raise ValueError(
+                    "Cannot build phi_x * phi_a interaction: "
+                    f"phi_x has dimension {x_dim}, but {which} action embedding "
+                    f"has dimension {a_dim}."
+                )
+            blocks.append(phi_x * phi_a)
+        if extra is not None:
+            blocks.append(np.asarray(extra))
+        return np.concatenate(blocks, axis=1)
+
+    def subset(self, idx: np.ndarray) -> "RealData":
+        """Return a row-resampled RealData, preserving optional extra features."""
+        return RealData(
+            phi_x=self.phi_x[idx],
+            phi_a_clinician=self.phi_a_clinician[idx],
+            phi_a_agent=self.phi_a_agent[idx],
+            y_clinician=self.y_clinician[idx],
+            y_agent=self.y_agent[idx],
+            extra_clinician=(
+                None if self.extra_clinician is None else self.extra_clinician[idx]
+            ),
+            extra_agent=None if self.extra_agent is None else self.extra_agent[idx],
+        )
+
+    def _validate_feature_matrix(self, name: str, value: np.ndarray) -> None:
+        arr = np.asarray(value)
+        if arr.ndim != 2:
+            raise ValueError(f"{name} must be a 2D array.")
+        if len(arr) != self.n:
+            raise ValueError(f"{name} length {len(arr)} does not match n={self.n}.")
 
 
 def featurize_records(
@@ -107,6 +157,8 @@ def apply_learned_action_embedding(
         phi_a_agent=z_a_ag,
         y_clinician=data.y_clinician,
         y_agent=data.y_agent,
+        extra_clinician=data.extra_clinician,
+        extra_agent=data.extra_agent,
     )
     return learned, diagnostics
 
@@ -261,13 +313,7 @@ def bootstrap_run(
     samples = []
     for b in range(n_boot):
         idx = rng.integers(0, data.n, size=data.n)
-        sub = RealData(
-            phi_x=data.phi_x[idx],
-            phi_a_clinician=data.phi_a_clinician[idx],
-            phi_a_agent=data.phi_a_agent[idx],
-            y_clinician=data.y_clinician[idx],
-            y_agent=data.y_agent[idx],
-        )
+        sub = data.subset(idx)
         v_hat = float(estimator(sub, seed=seed + b)["v_hat"])
         v_b = float(sub.y_clinician.mean())
         samples.append((v_hat, v_b))

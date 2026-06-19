@@ -68,13 +68,96 @@ def fit_density_ratio_classifier(
 def density_ratio(
     clf: LogisticRegression,
     features: np.ndarray,
-    clip: float = 20.0,
+    clip: float | None = 20.0,
 ) -> np.ndarray:
     """w(x, phi) = P / (1 - P), clipped to [0, clip] for stability."""
-    p = clf.predict_proba(features)[:, 1]
-    p = np.clip(p, 1e-6, 1 - 1e-6)
-    w = p / (1 - p)
-    return np.clip(w, 0.0, clip)
+    weights, _ = density_ratio_with_diagnostics(clf, features, clip=clip)
+    return weights
+
+
+def density_ratio_with_diagnostics(
+    clf: LogisticRegression,
+    features: np.ndarray,
+    clip: float | None = 20.0,
+) -> tuple[np.ndarray, dict]:
+    """Return density-ratio weights plus raw/clipping diagnostics.
+
+    ``clip=None`` disables the final upper-bound clipping while preserving the
+    numerical probability clipping used by the original ``density_ratio``.
+    """
+    raw_probabilities = clf.predict_proba(features)[:, 1]
+    probabilities = np.clip(raw_probabilities, 1e-6, 1 - 1e-6)
+    raw_weights = probabilities / (1 - probabilities)
+    if clip is None:
+        clipped_weights = raw_weights
+        clip_rate = 0.0
+    else:
+        clipped_weights = np.clip(raw_weights, 0.0, clip)
+        clip_rate = float(np.mean(raw_weights > clip))
+
+    diagnostics = {
+        "raw_probabilities": raw_probabilities,
+        "probabilities": probabilities,
+        "raw_weights": raw_weights,
+        "clipped_weights": clipped_weights,
+        "clip": clip,
+        "clip_rate": clip_rate,
+    }
+    diagnostics.update(_quantile_summary(raw_weights, prefix="raw_weight"))
+    diagnostics.update(_quantile_summary(clipped_weights, prefix="weight"))
+    return clipped_weights, diagnostics
+
+
+def summarize_density_ratio_weights(
+    weights: np.ndarray,
+    y_behavior: np.ndarray,
+    raw_weights: np.ndarray | None = None,
+    clip: float | None = None,
+) -> dict:
+    """Summarize positivity, clipping, and MIPS/SNIPS behavior."""
+    w = _as_finite_1d("weights", weights)
+    y = _as_finite_1d("y_behavior", y_behavior)
+    if len(w) != len(y):
+        raise ValueError("weights and y_behavior must have the same length.")
+
+    raw_w = w if raw_weights is None else _as_finite_1d("raw_weights", raw_weights)
+    if len(raw_w) != len(w):
+        raise ValueError("raw_weights and weights must have the same length.")
+
+    sum_w = float(w.sum())
+    mean_w = float(w.mean())
+    ess_fraction = effective_sample_size(w)
+    v_snips = float((w * y).sum() / sum_w) if sum_w > 0 else 0.0
+    v_unnormalized = float((w * y).mean())
+    corr = _safe_corr(w, y)
+
+    if clip is None:
+        clip_rate = 0.0
+    elif raw_weights is not None:
+        clip_rate = float(np.mean(raw_w > clip))
+    else:
+        clip_rate = float(np.mean(w >= clip))
+
+    summary = {
+        "clip": clip,
+        "n": int(len(w)),
+        "mean_w": mean_w,
+        "std_w": float(w.std(ddof=0)),
+        "raw_max_w": float(raw_w.max()),
+        "clip_rate": clip_rate,
+        "ess": float(ess_fraction * len(w)),
+        "ess_fraction": ess_fraction,
+        "top1_weight_mass": _top_weight_mass(w, 0.01),
+        "top5_weight_mass": _top_weight_mass(w, 0.05),
+        "top10_weight_mass": _top_weight_mass(w, 0.10),
+        "corr_w_y_behavior": corr,
+        "v_snips": v_snips,
+        "v_unnormalized_mips": v_unnormalized,
+        "snips_minus_unnormalized_mips": float(v_snips - v_unnormalized),
+    }
+    summary.update(_quantile_summary(w, prefix="w"))
+    summary.update(_quantile_summary(raw_w, prefix="raw_w"))
+    return summary
 
 
 def effective_sample_size(weights: np.ndarray) -> float:
@@ -90,3 +173,37 @@ def effective_sample_size(weights: np.ndarray) -> float:
     if s2 <= 0:
         return 0.0
     return float((s1 ** 2) / s2 / n)
+
+
+def _quantile_summary(values: np.ndarray, prefix: str) -> dict:
+    arr = np.asarray(values, dtype=float).reshape(-1)
+    quantiles = (0.0, 0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99, 1.0)
+    return {
+        f"{prefix}_q{int(round(q * 100)):02d}": float(np.quantile(arr, q))
+        for q in quantiles
+    }
+
+
+def _as_finite_1d(name: str, values: np.ndarray) -> np.ndarray:
+    arr = np.asarray(values, dtype=float).reshape(-1)
+    if arr.size == 0:
+        raise ValueError(f"{name} must be non-empty.")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values.")
+    return arr
+
+
+def _top_weight_mass(weights: np.ndarray, fraction: float) -> float:
+    w = np.asarray(weights, dtype=float).reshape(-1)
+    total = float(w.sum())
+    if total <= 0:
+        return 0.0
+    k = max(1, int(np.ceil(len(w) * fraction)))
+    return float(np.sort(w)[::-1][:k].sum() / total)
+
+
+def _safe_corr(x: np.ndarray, y: np.ndarray) -> float:
+    if len(x) < 2 or float(np.std(x)) <= 0 or float(np.std(y)) <= 0:
+        return 0.0
+    corr = float(np.corrcoef(x, y)[0, 1])
+    return corr if np.isfinite(corr) else 0.0

@@ -1,0 +1,67 @@
+canonical_examples: data/judge_calibration/canonical_examples_phase7_v2.jsonl
+data_summary: outputs/judge_calibration/data_summary_phase7_v2.json
+
+dataset:
+  include_ayers: true
+  ayers_dimensions: composite
+  include_counselbench: true
+  include_mediqa_qa_2019: true
+  include_liveqa_medical_2017: true
+
+judge_scores:
+  paths: []
+  donor_judge_ids:
+    - openai_gpt55
+    - anthropic_sonnet46
+    - google_gemini25flash_think1024
+    - cohere_command_a_plus
+    - mistral_large
+  required_judges: openai_gpt55,anthropic_sonnet46,google_gemini25flash_think1024,cohere_command_a_plus,mistral_large
+  rubric_id: domain_dimension_v2
+  scores_are_mock: false
+  providers:
+    openai_gpt55:
+      provider: openai
+      model: gpt-5.5
+    anthropic_sonnet46:
+      provider: anthropic
+      model: claude-sonnet-4-6
+    google_gemini25flash_think1024:
+      provider: gemini
+      model: gemini-2.5-flash
+    cohere_command_a_plus:
+      provider: cohere
+      model: command-a-plus-05-2026
+    mistral_large:
+      provider: mistral
+      model: mistral-large-latest
+
+score_matrix:
+  path: data/judge_calibration/score_matrix_phase7_v2_5judge_gemini25flash_think1024_cohere.csv
+  missingness_report: outputs/judge_calibration/phase7_v2_missingness_report.json
+  min_judge_coverage: null
+
+experiment:
+  output_dir: outputs/judge_calibration/phase7_v2_5judge_gemini25flash_think1024_cohere_grouped_random_balanced_dataset_dimension
+  split_protocol: grouped_random
+  seed: 0
+  train_frac: 0.6
+  val_frac: 0.2
+  test_frac: 0.2
+  lambda_grid:
+    - 0.0
+    - 0.0001
+    - 0.001
+    - 0.01
+    - 0.1
+    - 1.0
+  fit_intercept_options:
+    - true
+    - false
+  group_balance: true
+  group_balance_col: null
+  clip_predictions: true
+
+offline_safety:
+  call_online_apis_by_default: false
+  human_score_allowed_in_judge_prompt: false

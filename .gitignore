@@ -14,6 +14,13 @@ data/processed/
 data/processed_included/
 data/phase3/
 data/counselbench/
+data/judge_calibration/
+data/liveqa_medical_2017/
+data/mediqa_qa_2019/
+outputs/expert_best_embedding_diagnostics/
+outputs/judge_calibration/
+docs/current_overview.pdf
+docs/*.docx
 logs/
 *.log
 .env

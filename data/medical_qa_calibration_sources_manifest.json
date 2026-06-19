@@ -1,0 +1,52 @@
+{
+  "filtering_enabled": true,
+  "liveqa_medical_2017": {
+    "exact_duplicate_qrels_removed": 111,
+    "filter_report": {
+      "answer_pair_conflicting_duplicate_groups_removed": 0,
+      "answer_pair_conflicting_duplicate_rows_removed": 0,
+      "answer_pair_duplicate_groups": 0,
+      "answer_pair_exact_duplicate_rows_removed": 0,
+      "input_rows": 581,
+      "output_rows": 564,
+      "unusable_raw_grade_rows_removed": 17
+    },
+    "output": "data/liveqa_medical_2017/answers.jsonl",
+    "raw_files": {
+      "qrels": "data/raw/liveqa_medical_2017/TREC-2017-LiveQA-Medical-qrels-NIST-692.txt",
+      "test_xml": "data/raw/liveqa_medical_2017/TREC-2017-LiveQA-Medical-Test.xml"
+    },
+    "raw_grade_counts": {
+      "1": 396,
+      "2": 72,
+      "3": 71,
+      "4": 25
+    },
+    "rows": 564
+  },
+  "mediqa_qa_2019": {
+    "filter_report": {
+      "answer_pair_conflicting_duplicate_groups_removed": 5,
+      "answer_pair_conflicting_duplicate_rows_removed": 10,
+      "answer_pair_duplicate_groups": 19,
+      "answer_pair_exact_duplicate_rows_removed": 14,
+      "input_rows": 3042,
+      "output_rows": 2179,
+      "train_liveqa_med_overlap_rows_removed": 839
+    },
+    "output": "data/mediqa_qa_2019/answers.jsonl",
+    "raw_files": {
+      "test": "data/raw/mediqa_qa_2019/MEDIQA2019-Task3-QA-TestSet-wLabels.xml",
+      "train_alexa": "data/raw/mediqa_qa_2019/MEDIQA2019-Task3-QA-TrainingSet2-Alexa.xml",
+      "train_liveqa_med": "data/raw/mediqa_qa_2019/MEDIQA2019-Task3-QA-TrainingSet1-LiveQAMed.xml",
+      "validation": "data/raw/mediqa_qa_2019/MEDIQA2019-Task3-QA-ValidationSet.xml"
+    },
+    "raw_score_counts": {
+      "1": 272,
+      "2": 850,
+      "3": 512,
+      "4": 545
+    },
+    "rows": 2179
+  }
+}

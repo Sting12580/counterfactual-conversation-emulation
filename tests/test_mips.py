@@ -10,8 +10,10 @@ import numpy as np
 
 from cce_data.estimators.density_ratio import (
     density_ratio,
+    density_ratio_with_diagnostics,
     effective_sample_size,
     fit_density_ratio_classifier,
+    summarize_density_ratio_weights,
 )
 from cce_data.estimators.mips import featurize, mips_estimate, mips_oracle_estimate
 from cce_data.estimators.synthetic_toy import (
@@ -80,6 +82,57 @@ def test_density_ratio_calibration() -> None:
     assert 0.7 < w.mean() < 1.3
 
 
+def test_density_ratio_clip_none_returns_unbounded_probability_clipped_weights() -> None:
+    clf = _ProbabilityClassifier([0.5, 0.99, 1.0])
+    weights, diag = density_ratio_with_diagnostics(clf, np.zeros((3, 1)), clip=None)
+
+    assert np.allclose(weights[:2], [1.0, 99.0])
+    assert weights[2] > 100000.0
+    assert weights[2] < 1000000.1
+    assert diag["clip_rate"] == 0.0
+    assert np.allclose(diag["clipped_weights"], weights)
+
+
+def test_density_ratio_clip_twenty_clips_large_raw_weights() -> None:
+    clf = _ProbabilityClassifier([0.5, 0.99, 1.0])
+    weights, diag = density_ratio_with_diagnostics(clf, np.zeros((3, 1)), clip=20.0)
+
+    assert np.allclose(weights, [1.0, 20.0, 20.0])
+    assert diag["raw_weights"][1] > 20.0
+    assert diag["raw_weights"][2] > 20.0
+    assert diag["clip_rate"] == 2 / 3
+
+
+def test_summarize_density_ratio_weights_handles_degenerate_inputs_without_nan() -> None:
+    summary = summarize_density_ratio_weights(
+        weights=np.ones(5),
+        y_behavior=np.full(5, 0.7),
+        raw_weights=np.ones(5),
+        clip=20.0,
+    )
+
+    assert summary["mean_w"] == 1.0
+    assert summary["std_w"] == 0.0
+    assert summary["ess"] == 5.0
+    assert summary["ess_fraction"] == 1.0
+    assert summary["corr_w_y_behavior"] == 0.0
+    assert summary["v_snips"] == 0.7
+    assert summary["v_unnormalized_mips"] == 0.7
+    assert summary["snips_minus_unnormalized_mips"] == 0.0
+    for value in summary.values():
+        if isinstance(value, float):
+            assert np.isfinite(value)
+
+
+def test_density_ratio_default_clip_behavior_remains_unchanged() -> None:
+    clf = _ProbabilityClassifier([0.5, 0.99, 1.0])
+    features = np.zeros((3, 1))
+    expected = np.array([1.0, 20.0, 20.0])
+
+    assert np.allclose(density_ratio(clf, features), expected)
+    assert np.allclose(density_ratio(clf, features, clip=20.0), expected)
+
+
 def test_ess_formula_extremes() -> None:
     """Uniform weights -> ESS/n = 1.  All-mass-on-one-point -> ESS/n -> 1/n."""
     n = 100
@@ -97,3 +150,12 @@ def test_featurize_dims() -> None:
     a = np.array([0, 1, 2, 3, 4])
     F = featurize(xs, a)
     assert F.shape == (5, N_CONTEXTS + EMB_DIM)
+
+
+class _ProbabilityClassifier:
+    def __init__(self, probabilities: list[float]) -> None:
+        self.probabilities = np.asarray(probabilities, dtype=float)
+
+    def predict_proba(self, features: np.ndarray) -> np.ndarray:
+        assert len(features) == len(self.probabilities)
+        return np.column_stack([1.0 - self.probabilities, self.probabilities])
